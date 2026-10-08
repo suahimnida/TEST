@@ -76,6 +76,13 @@ function Result({ url, result }) {
     data.detections || {}
   ).filter(([, value]) => value !== null);
 
+  const similarCases = Array.isArray(data.similar_cases)
+    ? data.similar_cases
+    : [];
+  const similarPhishingCount = similarCases.filter(
+    (item) => item.label === 1
+  ).length;
+
   const suspiciousDetectionCount =
     detectionEntries.filter(
       ([, value]) => value?.status === "suspicious"
@@ -357,26 +364,40 @@ function Result({ url, result }) {
       <div className="result-section">
         <div className="section-heading">
           <div>
-            <p>유사 피싱 사례</p>
+            <p>유사 사례</p>
           </div>
 
-          <span>RAG</span>
+          <span>
+            {similarCases.length > 0
+              ? `피싱 ${similarPhishingCount}건 · 정상 ${
+                  similarCases.length - similarPhishingCount
+                }건`
+              : "RAG"}
+          </span>
         </div>
 
         <div className="assistant-card">
-          {data.similar_cases?.length > 0 ? (
-            data.similar_cases.map(
+          {similarCases.length > 0 ? (
+            similarCases.map(
               (item, index) => (
                 <div
                   className="finding"
                   key={`${item.url}-${index}`}
                 >
-                  <div className="finding-icon danger">
-                    !
+                  <div
+                    className={`finding-icon ${
+                      item.label === 1 ? "danger" : "normal"
+                    }`}
+                  >
+                    {item.label === 1 ? "!" : "✓"}
                   </div>
 
                   <div>
-                    <h4>유사 사이트</h4>
+                    <h4>
+                      {item.label === 1
+                        ? "유사한 피싱 사이트"
+                        : "유사한 정상 사이트"}
+                    </h4>
 
                     <p>{item.url}</p>
 
@@ -402,7 +423,7 @@ function Result({ url, result }) {
             )
           ) : (
             <p>
-              유사 피싱 사례가 없습니다.
+              유사 사례가 없습니다.
             </p>
           )}
         </div>
