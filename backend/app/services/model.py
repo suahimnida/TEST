@@ -18,7 +18,7 @@ from app.schemas import ModelResult
 
 logger = logging.getLogger(__name__)
 
-_ML_DIR = Path(__file__).resolve().parents[3] / "codes" / "ml_integration"
+_ML_DIR = Path(__file__).resolve().parents[2] / "ml_integration"
 
 # model_integration.py는 같은 폴더의 preprocess.py를 불러온다.
 # rag.py가 먼저 codes/preprocess.py를 불러왔다면 그것이 쓰이는데,

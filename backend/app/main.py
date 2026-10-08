@@ -4,6 +4,7 @@
     uvicorn app.main:app --reload
 """
 
+import logging
 import os
 import uuid
 from contextlib import asynccontextmanager
@@ -16,6 +17,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # backend/.env의 값을 환경변수로 읽어온다 (이미 설정된 환경변수가 우선)
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
+# RAG 로드 여부와 실패 원인이 서버 로그에 보이도록 앱 로그를 INFO 수준으로 출력한다
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:     [%(name)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 from app import db  # noqa: E402
 from app.schemas import (
@@ -35,7 +40,12 @@ async def lifespan(app: FastAPI):
     # 첫 요청이 느려지지 않도록 서버 시작 시 블랙리스트를 미리 로드
     blacklist.load_blacklist()
     db.init_db()
-    rag.load_rag()
+    # RAG 준비 중 오류(패키지 누락, 임베딩 모델 다운로드 실패 등)가 나도 서버는 뜨고,
+    # 블랙리스트 + ML 판정은 그대로 동작하도록 여기서 막는다
+    try:
+        rag.load_rag()
+    except Exception:
+        logger.exception("RAG 로드 실패: RAG 없이 서버를 실행합니다")
     yield
 
 

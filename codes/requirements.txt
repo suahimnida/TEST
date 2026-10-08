@@ -1,7 +1,0 @@
-pandas
-faiss-cpu
-sentence-transformers
-fastapi
-uvicorn[standard]
-anthropic
-pydantic

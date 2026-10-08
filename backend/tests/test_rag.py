@@ -62,3 +62,32 @@ def test_load_rag_without_vector_store(tmp_path, monkeypatch):
     monkeypatch.setenv("RAG_INDEX_DIR", str(tmp_path))
     assert rag.load_rag() is False
     assert rag._state is None
+
+
+def test_parse_verdict_plain_json():
+    text = '{"verdict": "phishing", "confidence": 0.87, "reason": "의심 키워드가 많습니다."}'
+    assert rag._parse_verdict(text) == {
+        "verdict": "phishing",
+        "confidence": pytest.approx(0.87),
+        "reason": "의심 키워드가 많습니다.",
+    }
+
+
+def test_parse_verdict_with_code_fence_and_percent():
+    text = '```json\n{"verdict": "Normal", "confidence": 92, "reason": "정상 사례와 유사합니다."}\n```'
+    result = rag._parse_verdict(text)
+    assert result["verdict"] == "normal"
+    assert result["confidence"] == pytest.approx(0.92)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "판정할 수 없습니다.",
+        '{"verdict": "unknown", "confidence": 0.5, "reason": "x"}',
+        '{"verdict": "phishing", "confidence": 0.5, "reason": ""}',
+    ],
+)
+def test_parse_verdict_rejects_bad_output(text):
+    with pytest.raises(ValueError):
+        rag._parse_verdict(text)

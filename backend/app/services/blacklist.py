@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 from app.schemas import BlacklistResult
 
 SOURCE = "KISA 2024"
-_DEFAULT_DIR = Path(__file__).resolve().parents[3]
+_DEFAULT_DIR = Path(__file__).resolve().parents[2] / "resources" / "blacklist"
 
 
 def _data_dir() -> Path:
