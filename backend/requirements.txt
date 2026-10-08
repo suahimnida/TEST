@@ -6,10 +6,9 @@ psycopg[binary]  # DATABASE_URL로 PostgreSQL을 쓸 때 필요
 pytest
 httpx
 
-# RAG (same stack as codes/rag_app.py)
+# RAG: 유사 사례는 ML 특징으로 직접 비교하므로 문장 임베딩 모델(sentence-transformers)과
+# FAISS가 필요 없다. 벡터 스토어를 다시 만들 때는 scripts/requirements.txt를 쓴다
 anthropic
-faiss-cpu
-sentence-transformers
 pandas
 
 # ML 모델 (codes/ml_integration). 학습 때와 같은 버전이어야 점수가 올바르다
