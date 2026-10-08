@@ -2,6 +2,7 @@ fastapi
 uvicorn[standard]
 pydantic>=2
 python-dotenv
+psycopg[binary]  # DATABASE_URL로 PostgreSQL을 쓸 때 필요
 pytest
 httpx
 

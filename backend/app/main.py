@@ -40,7 +40,14 @@ from app.services import blacklist, detections, model, rag, verdict
 async def lifespan(app: FastAPI):
     # 첫 요청이 느려지지 않도록 서버 시작 시 블랙리스트를 미리 로드
     blacklist.load_blacklist()
-    db.init_db()
+    # DB 연결 정보가 잘못되면 여기서 서버 시작을 멈춘다. Render는 시작에 실패한 배포를
+    # 적용하지 않고 이전 배포를 계속 서비스하므로, 기록이 엉뚱한 곳에 쌓이지 않는다
+    try:
+        db.init_db()
+    except Exception:
+        logger.exception("DB 연결 실패: %s", db.describe())
+        raise
+    logger.info("분석 기록 저장소: %s", db.describe())
     # RAG 준비 중 오류(패키지 누락, 임베딩 모델 다운로드 실패 등)가 나도 서버는 뜨고,
     # 블랙리스트 + ML 판정은 그대로 동작하도록 여기서 막는다
     try:
@@ -109,7 +116,11 @@ def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = He
         rag=rag_result.reference,
         model=model_result,
     )
-    db.save_analysis(result, _client_key(x_client_id))
+    # 저장에 실패해도(예: DB 일시 장애) 분석 결과는 사용자에게 돌려준다
+    try:
+        db.save_analysis(result, _client_key(x_client_id))
+    except Exception:
+        logger.exception("분석 기록 저장 실패: %s", request.url)
     return result
 
 
