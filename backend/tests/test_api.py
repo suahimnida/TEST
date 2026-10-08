@@ -26,9 +26,9 @@ def test_create_analysis_returns_stub(monkeypatch):
     assert body["url"] == "https://example.com"
     for key in ["verdict", "confidence", "risk_score", "risk_level"]:
         assert body[key] is None
-    assert body["detections"] == {
-        "url": None, "url_stats": None, "domain": None, "html": None, "image": None
-    }
+    assert set(body["detections"]) == {"url", "url_stats", "domain", "html", "image"}
+    assert body["detections"]["url"]["status"] == "normal"
+    assert body["detections"]["html"]["status"] == "not_analyzed"
     assert body["ai_analysis"] == {"summary": None, "reasons": []}
     assert body["extracted_features"] == {}
     assert body["similar_cases"] == []

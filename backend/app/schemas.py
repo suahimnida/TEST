@@ -48,7 +48,11 @@ class SimilarCase(BaseModel):
 
 
 class Detections(BaseModel):
-    """탐지 항목별 결과. 아직 구현되지 않은 항목은 null."""
+    """탐지 항목별 결과 (app/services/detections.py).
+
+    각 값은 {"status": "suspicious" | "normal" | "not_analyzed", "reasons": [...], "notes": [...]}.
+    탐지 중 오류가 나면 null.
+    """
 
     url: dict | None = None
     url_stats: dict | None = None

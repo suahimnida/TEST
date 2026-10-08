@@ -29,10 +29,11 @@ from app.schemas import (
     AnalysisRequest,
     AnalysisResponse,
     ClientResponse,
+    Detections,
     HealthResponse,
     ModelResult,
 )
-from app.services import blacklist, model, rag, verdict
+from app.services import blacklist, detections, model, rag, verdict
 
 
 @asynccontextmanager
@@ -87,12 +88,20 @@ def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = He
         rag_result = rag.explain(request.url)
         model_result = model.predict(request.url)
 
+    # URL 문자열 기반 탐지 결과. 실패해도 나머지 분석 결과는 그대로 반환한다
+    try:
+        detection_result = Detections(**detections.analyze(request.url))
+    except Exception:
+        logger.exception("탐지 결과 생성 실패: %s", request.url)
+        detection_result = Detections()
+
     result = AnalysisResponse(
         id=str(uuid.uuid4()),
         status="completed",
         url=request.url,
         is_public=request.is_public,
         **verdict.decide(blacklist_result, model_result),
+        detections=detection_result,
         ai_analysis=AiAnalysis(summary=rag_result.summary),
         extracted_features=rag_result.features,
         similar_cases=rag_result.similar_cases,
