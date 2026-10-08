@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../../services/api";
+import { getSavedClientId, listMyAnalyses } from "../../services/api";
 import "./Home.css";
 
 function Home({ onAnalyze, onOpenHistory }) {
@@ -9,37 +9,15 @@ function Home({ onAnalyze, onOpenHistory }) {
 
   useEffect(() => {
     const fetchRecentHistory = async () => {
-      const clientId =
-        localStorage.getItem("phishingClientId");
-
-      if (!clientId) {
+      // 아직 분석한 적 없는 브라우저면 ID를 새로 발급하지 않고 넘어간다
+      if (!getSavedClientId()) {
         return;
       }
 
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/v1/analyses?scope=mine`,
-          {
-            headers: {
-              "X-Client-Id": clientId,
-            },
-          }
-        );
+        const items = await listMyAnalyses();
 
-        if (!response.ok) {
-          throw new Error(
-            `최근 분석 기록 조회 실패: ${response.status}`
-          );
-        }
-
-        const data = await response.json();
-
-        // 백엔드 응답: { items: [...] }
-        setRecentHistory(
-          Array.isArray(data.items)
-            ? data.items.slice(0, 3)
-            : []
-        );
+        setRecentHistory(items.slice(0, 3));
       } catch (error) {
         console.error(
           "최근 분석 기록을 불러오지 못했습니다:",

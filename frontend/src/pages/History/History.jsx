@@ -1,38 +1,7 @@
 import { useEffect, useState } from "react";
 import "./History.css";
 
-import { API_BASE_URL } from "../../services/api";
-const CLIENT_ID_KEY = "phishingClientId";
-
-async function getClientId() {
-  const savedClientId = localStorage.getItem(CLIENT_ID_KEY);
-
-  if (savedClientId) {
-    return savedClientId;
-  }
-
-  const response = await fetch(
-    `${API_BASE_URL}/api/v1/clients`,
-    {
-      method: "POST",
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      `클라이언트 ID 발급 실패: ${response.status}`
-    );
-  }
-
-  const data = await response.json();
-
-  localStorage.setItem(
-    CLIENT_ID_KEY,
-    data.client_id
-  );
-
-  return data.client_id;
-}
+import { getAnalysis, listMyAnalyses } from "../../services/api";
 
 function History({ onViewResult }) {
   const [history, setHistory] = useState([]);
@@ -41,30 +10,9 @@ function History({ onViewResult }) {
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const clientId = await getClientId();
+        const items = await listMyAnalyses();
 
-        const response = await fetch(
-          `${API_BASE_URL}/api/v1/analyses?scope=mine`,
-          {
-            headers: {
-              "X-Client-Id": clientId,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            `분석 기록 조회 실패: ${response.status}`
-          );
-        }
-
-        const data = await response.json();
-
-        setHistory(
-          Array.isArray(data.items)
-            ? data.items
-            : []
-        );
+        setHistory(items);
       } catch (error) {
         console.error(
           "분석 기록을 불러오지 못했습니다:",
@@ -81,24 +29,7 @@ function History({ onViewResult }) {
 
   const handleViewResult = async (item) => {
     try {
-      const clientId = await getClientId();
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/v1/analyses/${item.id}`,
-        {
-          headers: {
-            "X-Client-Id": clientId,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `분석 결과 조회 실패: ${response.status}`
-        );
-      }
-
-      const result = await response.json();
+      const result = await getAnalysis(item.id);
 
       onViewResult(result);
     } catch (error) {

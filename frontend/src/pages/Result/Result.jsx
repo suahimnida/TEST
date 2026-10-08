@@ -88,10 +88,11 @@ function Result({ url, result }) {
       ? Number(data.risk_score)
       : null;
 
+  // 백엔드는 신뢰도를 0~1 비율로 보낸다 (예: 0.91). 화면에는 퍼센트로 표시한다
   const confidence =
     data.confidence !== null &&
     data.confidence !== undefined
-      ? Number(data.confidence)
+      ? Number(data.confidence) * 100
       : null;
 
   return (
@@ -159,7 +160,7 @@ function Result({ url, result }) {
 
           <p>
             {confidence !== null
-              ? `판정 신뢰도: ${confidence.toFixed(1)}%`
+              ? `판정 신뢰도: ${Math.round(confidence)}%`
               : "판정 신뢰도 정보가 없습니다."}
           </p>
 
