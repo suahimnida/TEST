@@ -76,6 +76,11 @@ function Result({ url, result }) {
     data.detections || {}
   ).filter(([, value]) => value !== null);
 
+  const suspiciousDetectionCount =
+    detectionEntries.filter(
+      ([, value]) => value?.status === "suspicious"
+    ).length;
+
   const riskLevel =
     data.risk_level || "caution";
 
@@ -235,6 +240,9 @@ function Result({ url, result }) {
 
           <span>
             {detectionEntries.length}개 항목
+            {suspiciousDetectionCount > 0
+              ? ` 중 의심 ${suspiciousDetectionCount}개`
+              : ""}
           </span>
         </div>
 
@@ -251,6 +259,8 @@ function Result({ url, result }) {
                  * 문자열/객체 모두 안전하게 표시합니다.
                  */
                 let status = null;
+                let reasons = [];
+                let notes = [];
 
                 if (
                   typeof detection === "string"
@@ -264,6 +274,12 @@ function Result({ url, result }) {
                     detection.status ||
                     detection.label ||
                     null;
+                  reasons = Array.isArray(detection.reasons)
+                    ? detection.reasons
+                    : [];
+                  notes = Array.isArray(detection.notes)
+                    ? detection.notes
+                    : [];
                 }
 
                 return (
@@ -273,6 +289,8 @@ function Result({ url, result }) {
                         ? "suspicious"
                         : status === "normal"
                         ? "normal"
+                        : status === "not_analyzed"
+                        ? "not-analyzed"
                         : ""
                     }`}
                     key={key}
@@ -286,6 +304,28 @@ function Result({ url, result }) {
                         {info?.description ||
                           "분석 결과"}
                       </p>
+
+                      {reasons.length + notes.length > 0 && (
+                        <ul className="detection-findings">
+                          {reasons.map((text) => (
+                            <li
+                              className="detection-reason"
+                              key={`reason-${text}`}
+                            >
+                              {text}
+                            </li>
+                          ))}
+
+                          {notes.map((text) => (
+                            <li
+                              className="detection-note"
+                              key={`note-${text}`}
+                            >
+                              {text}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
 
                     <span>

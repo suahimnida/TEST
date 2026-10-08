@@ -265,6 +265,57 @@
   color: #42e8c4;
 }
 
+.detection-row.not-analyzed > span {
+  color: #59615f;
+}
+
+/* 항목별 탐지 근거 */
+.detection-row:has(.detection-findings) {
+  align-items: flex-start;
+}
+
+.detection-findings {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detection-findings li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.detection-findings li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.detection-reason {
+  color: #f4c7cb;
+}
+
+.detection-reason::before {
+  background: #ff4d5a;
+}
+
+.detection-note {
+  color: #8b9491;
+}
+
+.detection-note::before {
+  background: #3a4140;
+}
+
 /* Web analysis */
 
 .web-analysis {
