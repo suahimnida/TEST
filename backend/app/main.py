@@ -1,3 +1,9 @@
+"""피싱 URL 분석 API 서버.
+
+실행 (backend/ 폴더에서):
+    uvicorn app.main:app --reload
+"""
+
 import logging
 import os
 import uuid
@@ -9,12 +15,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+# backend/.env의 값을 환경변수로 읽어온다 (이미 설정된 환경변수가 우선)
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
+# RAG 로드 여부와 실패 원인이 서버 로그에 보이도록 앱 로그를 INFO 수준으로 출력한다
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:     [%(name)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-from app import db 
+from app import db  # noqa: E402
 from app.schemas import (
     AiAnalysis,
     AnalysisListResponse,
@@ -41,13 +49,18 @@ from app.services.llm_openai import OpenAIJsonClient
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 첫 요청이 느려지지 않도록 서버 시작 시 블랙리스트를 미리 로드
     blacklist.load_blacklist()
+    # DB 연결 정보가 잘못되면 여기서 서버 시작을 멈춘다. Render는 시작에 실패한 배포를
+    # 적용하지 않고 이전 배포를 계속 서비스하므로, 기록이 엉뚱한 곳에 쌓이지 않는다
     try:
         db.init_db()
     except Exception:
         logger.exception("DB 연결 실패: %s", db.describe())
         raise
     logger.info("분석 기록 저장소: %s", db.describe())
+    # RAG 준비 중 오류(패키지 누락, 임베딩 모델 다운로드 실패 등)가 나도 서버는 뜨고,
+    # 블랙리스트 + ML 판정은 그대로 동작하도록 여기서 막는다
     try:
         rag.load_rag()
     except Exception:
@@ -57,6 +70,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="피싱 URL 분석 API", version="0.1.0", lifespan=lifespan)
 
+# 프론트 개발 서버(Vite)에서 오는 요청을 허용. 쉼표로 여러 주소 지정 가능
 app.add_middleware(
     CORSMiddleware,
     allow_origins=(os.environ.get("CORS_ORIGINS") or "http://localhost:5173").split(","),
@@ -71,17 +85,20 @@ def health():
 
 
 def _client_key(client_id: uuid.UUID | None) -> str | None:
+    """헤더의 브라우저 ID를 DB에 저장하는 형태(소문자 UUID 문자열)로 바꾼다."""
     return str(client_id) if client_id else None
 
 
 @app.post("/api/v1/clients", response_model=ClientResponse)
 def create_client():
+    """브라우저 ID 발급. 프론트는 로컬스토리지에 저장해두고 X-Client-Id 헤더로 보낸다."""
     return ClientResponse(client_id=str(uuid.uuid4()))
 
 
 @app.post("/api/v1/analyses", response_model=AnalysisResponse)
 def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = Header(None)):
     blacklist_result = blacklist.check_blacklist(request.url)
+    # 블랙리스트에 있으면 피싱으로 확정되므로 RAG/ML은 돌리지 않는다 (팀 합의)
     if blacklist_result.matched:
         rag_result = rag.RagResult()
         model_result = ModelResult(status="not_ready")
@@ -89,6 +106,7 @@ def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = He
         rag_result = rag.explain(request.url)
         model_result = model.predict(request.url)
 
+    # URL 문자열 기반 탐지 결과. 실패해도 나머지 분석 결과는 그대로 반환한다
     try:
         detection_result = Detections(**detections.analyze(request.url))
     except Exception:
@@ -109,6 +127,7 @@ def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = He
         rag=rag_result.reference,
         model=model_result,
     )
+    # 저장에 실패해도(예: DB 일시 장애) 분석 결과는 사용자에게 돌려준다
     try:
         db.save_analysis(result, _client_key(x_client_id))
     except Exception:
@@ -122,6 +141,7 @@ def list_analyses(
     limit: int = Query(20, ge=1, le=100),
     x_client_id: uuid.UUID | None = Header(None),
 ):
+    """scope=mine: 이 브라우저의 기록 / scope=public: 공개된 기록."""
     if scope == "public":
         return AnalysisListResponse(items=db.list_analyses(limit))
     if x_client_id is None:
@@ -131,15 +151,23 @@ def list_analyses(
 
 @app.get("/api/v1/analyses/{analysis_id}", response_model=AnalysisResponse)
 def read_analysis(analysis_id: str, x_client_id: uuid.UUID | None = Header(None)):
+    # 비공개 결과는 만든 브라우저에서만 보인다. 남의 비공개 결과도 "없음"으로 응답한다
     result = db.get_analysis(analysis_id, _client_key(x_client_id))
     if result is None:
         raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
     return result
 
+
+# ---------------------------------------------------------------------------
+# 분석 리포트
+# ---------------------------------------------------------------------------
+
+# OpenAI 클라이언트는 처음 쓸 때 한 번만 만든다. 키나 모델이 없으면 None (템플릿으로 대신).
 _llm_clients: dict = {}
 
 
 def _followup_client():
+    """첫번째 OpenAI 키: 후속 조치 조사"""
     if "followup" not in _llm_clients:
         _llm_clients["followup"] = OpenAIJsonClient.from_env(
             "FOLLOWUP", "후속 조치 조사", followup.DEFAULT_FOLLOWUP_MODEL
@@ -148,6 +176,7 @@ def _followup_client():
 
 
 def _report_client():
+    """두번째 OpenAI 키: 리포트 작성"""
     if "report" not in _llm_clients:
         _llm_clients["report"] = OpenAIJsonClient.from_env(
             "REPORT", "리포트 작성", report.DEFAULT_REPORT_MODEL
@@ -155,22 +184,23 @@ def _report_client():
     return _llm_clients["report"]
 
 
-def _load_report(analysis_id: str, client_key: str | None, regenerate: bool) -> ReportResponse:
+def _load_report(analysis_id: str, client_key: str | None) -> ReportResponse:
+    """분석 1건당 리포트는 한 번만 만든다. 이미 있으면 저장된 리포트를 돌려준다 (LLM을 다시 부르지 않음)."""
     record = db.get_analysis_record(analysis_id, client_key)
     if record is None:
         raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
     analysis, analyzed_at = record
 
-    if not regenerate:
-        cached = db.get_report(analysis_id)
-        if cached is not None:
-            return cached
+    cached = db.get_report(analysis_id)
+    if cached is not None:
+        return cached
 
+    # 1) 첫번째 키로 후속 조치 조사 → 2) 두번째 키로 리포트 작성
     research = followup.research(analysis, client=_followup_client())
     result = report.generate_report(
         analysis, research, client=_report_client(), analyzed_at=analyzed_at
     )
-
+    # 저장에 실패해도 만든 리포트는 돌려준다 (다음에 다시 만들면 된다)
     try:
         db.save_report(result)
     except Exception:
@@ -181,15 +211,16 @@ def _load_report(analysis_id: str, client_key: str | None, regenerate: bool) -> 
 @app.post("/api/v1/analyses/{analysis_id}/report", response_model=ReportResponse)
 def create_report(
     analysis_id: str,
-    regenerate: bool = Query(False, description="true면 저장된 리포트를 무시하고 새로 만든다"),
     x_client_id: uuid.UUID | None = Header(None),
 ):
-    return _load_report(analysis_id, _client_key(x_client_id), regenerate)
+    """분석 결과로 리포트를 만든다. 이미 만든 리포트가 있으면 그대로 돌려준다 (다시 생성 기능 없음)."""
+    return _load_report(analysis_id, _client_key(x_client_id))
 
 
 @app.get("/api/v1/analyses/{analysis_id}/report.pdf")
 def download_report_pdf(analysis_id: str, x_client_id: uuid.UUID | None = Header(None)):
-    result = _load_report(analysis_id, _client_key(x_client_id), regenerate=False)
+    """리포트 PDF. 리포트가 아직 없으면 먼저 만든다."""
+    result = _load_report(analysis_id, _client_key(x_client_id))
     pdf = report_pdf.render_report_pdf(result)
     filename = f"phishing-report-{analysis_id[:8]}.pdf"
     return Response(
