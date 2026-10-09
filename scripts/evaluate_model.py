@@ -15,6 +15,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.metrics import average_precision_score, roc_auc_score
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +34,19 @@ FREE_HOSTING = (
 )
 
 
+REQUIRED_SKLEARN = "1.3.2"
+
+
+def check_environment():
+    """모델은 scikit-learn 1.3.2로 저장됐다. 다른 버전으로 불러오면 오류 없이 엉뚱한 점수가 나온다."""
+    if sklearn.__version__ != REQUIRED_SKLEARN:
+        sys.exit(
+            f"[중단] scikit-learn {sklearn.__version__}에서는 모델 점수가 올바르게 계산되지 않습니다.\n"
+            f"       모델이 저장된 버전({REQUIRED_SKLEARN})과 Python 3.12 가상환경에서 실행하세요.\n"
+            f"       현재 Python: {sys.version.split()[0]} ({sys.executable})"
+        )
+
+
 def load_model():
     model = joblib.load(ML / "models" / "best_model.joblib")
     columns = json.loads((ML / "models" / "feature_columns.json").read_text(encoding="utf-8"))
@@ -42,6 +56,8 @@ def load_model():
 def score(urls, model, columns) -> pd.DataFrame:
     feats = pd.DataFrame([extract_features(u) for u in urls])
     feats["score"] = model.predict_proba(feats[columns])[:, 1] * 100
+    if feats["score"].min() < 0 or feats["score"].max() > 100:
+        sys.exit("[중단] 모델 점수가 0~100 범위를 벗어났습니다. scikit-learn 버전을 확인하세요.")
     return feats
 
 
@@ -144,6 +160,7 @@ def main():
     parser.add_argument("--internal", action="store_true", help="내부 평가 세트도 계산 (몇 분 걸림)")
     args = parser.parse_args()
 
+    check_environment()
     model, columns = load_model()
     data = pd.read_csv(args.eval_set)
     scored = score(data["url"].tolist(), model, columns)
@@ -178,8 +195,8 @@ def main():
     df["error_type"] = ""
     fp = df[(df.label == 0) & (df.score >= 60)].copy()
     fn = df[(df.label == 1) & (df.score < 60)].copy()
-    fp["error_type"] = fp.apply(error_type, axis=1)
-    fn["error_type"] = fn.apply(error_type, axis=1)
+    fp["error_type"] = [error_type(row) for _, row in fp.iterrows()]
+    fn["error_type"] = [error_type(row) for _, row in fn.iterrows()]
     report["오탐 유형"] = fp.error_type.value_counts().to_dict()
     report["미탐 유형"] = fn.error_type.value_counts().to_dict()
 
