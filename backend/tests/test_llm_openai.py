@@ -1,8 +1,3 @@
-"""OpenAI 호환 클라이언트 테스트.
-
-실제 OpenAI SDK를 쓰고, 네트워크 대신 가짜 중간 서버(MockTransport)가 응답한다.
-"""
-
 import json
 
 import openai
@@ -36,7 +31,6 @@ def completion(model, content):
 
 @pytest.fixture
 def fake_server(monkeypatch):
-    """OpenAI 클라이언트가 가짜 중간 서버로 요청하게 한다. 받은 요청은 server.requests에 쌓인다."""
     import httpx2
 
     server = type("Server", (), {})()
@@ -62,10 +56,6 @@ def fake_server(monkeypatch):
         monkeypatch.delenv(f"TEST_OPENAI_{name}", raising=False)
     return server
 
-
-# ---- 1. 모델명 지정 ----
-
-
 def test_model_from_env_overrides_default(fake_server, monkeypatch):
     monkeypatch.setenv("TEST_OPENAI_API_KEY", "key")
     monkeypatch.setenv("TEST_OPENAI_MODEL", "env-model")
@@ -83,9 +73,6 @@ def test_default_model_used_when_env_missing(fake_server, monkeypatch):
 def test_missing_model_disables_client(fake_server, monkeypatch):
     monkeypatch.setenv("TEST_OPENAI_API_KEY", "key")
     assert OpenAIJsonClient.from_env("TEST", "테스트", default_model="") is None
-
-
-# ---- 2. 키/토큰 검사 ----
 
 
 def test_missing_key_and_token_disables_client(fake_server, monkeypatch):
@@ -108,9 +95,6 @@ def test_token_wins_over_key(fake_server, monkeypatch):
     monkeypatch.setenv("TEST_OPENAI_AUTH_TOKEN", "token-value")
     OpenAIJsonClient.from_env("TEST", "테스트").ask("system", "user", Answer)
     assert fake_server.requests[0]["headers"]["authorization"] == "Bearer token-value"
-
-
-# ---- 3. Base URL ----
 
 
 @pytest.mark.parametrize(
@@ -136,9 +120,6 @@ def test_requests_go_to_middle_server(fake_server, monkeypatch):
     assert fake_server.requests[0]["url"] == "https://copa.codyssey.kr/v1/chat/completions"
 
 
-# ---- 응답 형식 ----
-
-
 def make_client(monkeypatch):
     monkeypatch.setenv("TEST_OPENAI_MODEL", "m")
     monkeypatch.setenv("TEST_OPENAI_API_KEY", "k")
@@ -162,7 +143,6 @@ def test_falls_back_to_plain_json_when_structured_rejected(fake_server, monkeypa
     assert "response_format" in first["body"] and "response_format" not in second["body"]
     assert "JSON 스키마" in second["body"]["messages"][0]["content"]
 
-    # 한 번 거절된 뒤에는 처음부터 일반 요청을 보낸다
     client.ask("system", "user", Answer)
     assert len(fake_server.requests) == 3 and "response_format" not in fake_server.requests[2]["body"]
 

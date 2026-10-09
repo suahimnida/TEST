@@ -1,16 +1,3 @@
-"""
-피싱 URL 분석 프로젝트 - ML 데이터 정제/특징 추출 스크립트
-
-입력: UCI PHIUSIIL Phishing URL Dataset (또는 'url', 'label' 컬럼을 가진 CSV)
-      label: 1 = phishing, 0 = normal (legitimate) 로 통일
-출력: 특징이 추출된 학습용 CSV (features_output.csv)
-
-사용법:
-    python preprocess.py --input PhiUSIIL_Phishing_URL_Dataset.csv --output features_output.csv
-
-작성자: 성주 (AI 개발자)
-"""
-
 import argparse
 import math
 import re
@@ -19,16 +6,12 @@ from urllib.parse import urlparse
 
 import pandas as pd
 
-# ---------------------------------------------------------------------------
-# 1. 의심 키워드 리스트 (브랜드 사칭/보안 관련 키워드)
-# ---------------------------------------------------------------------------
 SUSPICIOUS_KEYWORDS = [
     "login", "verify", "secure", "account", "update", "confirm",
     "banking", "signin", "webscr", "ebayisapi", "password", "auth",
     "paypal", "kakao", "naver", "coupang", "wallet", "bonus",
 ]
 
-# 흔히 쓰이는 URL 단축 서비스 (별도 플래그로 처리)
 SHORTENER_DOMAINS = {
     "bit.ly", "tinyurl.com", "goo.gl", "t.co", "buly.kr", "url.kr",
     "han.gl", "vo.la", "is.gd", "ow.ly", "me2.do", "abit.ly",
@@ -38,7 +21,6 @@ IP_PATTERN = re.compile(r"^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$")
 
 
 def shannon_entropy(s: str) -> float:
-    """문자열의 섀넌 엔트로피 계산. 빈 문자열은 0."""
     if not s:
         return 0.0
     freq = Counter(s)
@@ -47,32 +29,27 @@ def shannon_entropy(s: str) -> float:
 
 
 def char_ngrams(s: str, n: int = 3) -> list:
-    """문자 n-gram 리스트 반환."""
     if len(s) < n:
         return [s] if s else []
     return [s[i:i + n] for i in range(len(s) - n + 1)]
 
 
 def is_ip_address(host: str) -> int:
-    """호스트가 IP 주소 형태인지 여부 (1/0)."""
     if not host:
         return 0
     return 1 if IP_PATTERN.match(host) else 0
 
 
 def has_punycode(host: str) -> int:
-    """도메인에 punycode(xn--) 사용 여부."""
     return 1 if "xn--" in (host or "") else 0
 
 
 def count_suspicious_keywords(url: str) -> int:
-    """URL 내 의심 키워드 등장 횟수."""
     url_lower = url.lower()
     return sum(1 for kw in SUSPICIOUS_KEYWORDS if kw in url_lower)
 
 
 def is_shortener(host: str) -> int:
-    """단축 URL 서비스 도메인인지 여부."""
     if not host:
         return 0
     host = host.lower().replace("www.", "")
@@ -80,7 +57,6 @@ def is_shortener(host: str) -> int:
 
 
 def safe_urlparse(url: str):
-    """스킴이 없는 URL도 안전하게 파싱."""
     url = url.strip()
     if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", url):
         url = "http://" + url
@@ -91,13 +67,11 @@ def safe_urlparse(url: str):
 
 
 def extract_features(url: str) -> dict:
-    """URL 문자열 하나에서 특징 딕셔너리를 추출."""
     parsed = safe_urlparse(url)
-    host = parsed.netloc.split(":")[0]  # 포트 제거
+    host = parsed.netloc.split(":")[0] 
     path = parsed.path or ""
     query = parsed.query or ""
     subdomain_parts = host.split(".")
-    # naver.com -> 서브도메인 0개, mail.naver.com -> 서브도메인 1개 로 계산
     subdomain_count = max(len(subdomain_parts) - 2, 0) if len(subdomain_parts) > 2 else 0
 
     digits = sum(c.isdigit() for c in url)
@@ -129,7 +103,6 @@ def extract_features(url: str) -> dict:
         "count_www": url.lower().count("www"),
     }
 
-    # 문자 3-gram Top3 (분석용 참고 컬럼, 모델 학습 시 별도 벡터화 필요)
     ngrams = char_ngrams(url.lower(), n=3)
     top_ngrams = [g for g, _ in Counter(ngrams).most_common(3)]
     features["top_3gram_1"] = top_ngrams[0] if len(top_ngrams) > 0 else ""
@@ -140,7 +113,6 @@ def extract_features(url: str) -> dict:
 
 
 def normalize_label(value) -> int:
-    """다양한 라벨 표기를 1(phishing)/0(normal)로 통일."""
     if isinstance(value, (int, float)):
         return int(value)
     v = str(value).strip().lower()
@@ -148,14 +120,10 @@ def normalize_label(value) -> int:
         return 1
     if v in ("0", "legitimate", "good", "benign", "normal"):
         return 0
-    # UCI PHIUSIIL 공식 데이터 카드 기준: label 1 = legitimate(정상), 0 = phishing(피싱).
-    # 우리 프로젝트 정의(1=피싱, 0=정상)와 정반대이므로, 텍스트 라벨이 아니라
-    # 숫자 0/1 그대로 들어오는 원본 UCI 데이터라면 반드시 --invert-label 옵션을 켤 것.
     raise ValueError(f"알 수 없는 라벨 값: {value}")
 
 
 def clean_dataframe(df: pd.DataFrame, url_col: str, label_col: str) -> pd.DataFrame:
-    """결측치 제거, 중복 URL 제거, 라벨 정규화."""
     df = df[[url_col, label_col]].copy()
     df.columns = ["url", "label"]
 
@@ -172,7 +140,6 @@ def clean_dataframe(df: pd.DataFrame, url_col: str, label_col: str) -> pd.DataFr
 
 
 def build_feature_dataset(df: pd.DataFrame) -> pd.DataFrame:
-    """URL별 특징 추출 후 라벨과 합쳐서 반환."""
     records = []
     for _, row in df.iterrows():
         feats = extract_features(row["url"])

@@ -1,9 +1,3 @@
-"""분석 리포트를 PDF로 만든다 (ReportLab).
-
-한글 글꼴은 backend/resources/fonts의 나눔고딕(SIL Open Font License, OFL.txt 참고)을 쓴다.
-ReportLab 기본 글꼴은 한글을 지원하지 않아 글자가 깨진다.
-"""
-
 import io
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -135,7 +129,6 @@ def render_report_pdf(report: ReportResponse) -> bytes:
         Spacer(1, 10),
     ]
 
-    # 판정 요약 박스
     level_color = LEVEL_COLORS.get(report.risk_level or "", MUTED)
     score = f"{report.risk_score:.1f}" if report.risk_score is not None else "-"
     verdict = VERDICT_KO.get(report.verdict or "", "판정 불가")
@@ -169,10 +162,8 @@ def render_report_pdf(report: ReportResponse) -> bytes:
     )
     story.append(summary_box)
 
-    # 1. 요약
     story += [_p("1. 요약", s["h2"]), _p(report.summary, s["body"])]
 
-    # 2. 판정 근거
     rows = [[_p("출처", s["cell_bold"]), _p("내용", s["cell_bold"]), _p("점수 반영", s["cell_bold"])]]
     for e in report.evidence:
         rows.append(
@@ -183,7 +174,6 @@ def render_report_pdf(report: ReportResponse) -> bytes:
         _table(rows, [42 * mm, width - 42 * mm - 22 * mm, 22 * mm]),
     ]
 
-    # 3. 유사 사례
     story.append(_p("3. 유사 사례", s["h2"]))
     if report.similar_cases:
         rows = [[_p("URL", s["cell_bold"]), _p("실제 판정", s["cell_bold"]), _p("유사도", s["cell_bold"])]]
@@ -203,8 +193,6 @@ def render_report_pdf(report: ReportResponse) -> bytes:
     else:
         story.append(_p("유사 사례를 찾지 못했습니다.", s["body"]))
 
-    # 4. AI 분석 설명 (분석 결과 화면과 같은 내용)
-    # 짧은 섹션은 제목이 페이지 끝에 홀로 남지 않도록 본문과 묶는다
     story.append(
         KeepTogether(
             [
@@ -214,10 +202,8 @@ def render_report_pdf(report: ReportResponse) -> bytes:
         )
     )
 
-    # 5. 위험 분석
     story.append(KeepTogether([_p("5. 위험 분석", s["h2"]), _p(report.risk_assessment, s["body"])]))
 
-    # 6. 후속 조치 (조사 결과 + 상황별 조치)
     heading = [
         _p("6. 후속 조치", s["h2"]),
         _p("조사 결과", s["h3"]),
@@ -226,7 +212,6 @@ def render_report_pdf(report: ReportResponse) -> bytes:
         _p("아래에서 본인의 상황에 해당하는 항목을 확인하세요. ★ 표시는 이 URL에 특히 중요한 조치입니다.", s["small"]),
     ]
     for i, group in enumerate(report.action_groups):
-        # 제목이 페이지 끝에 홀로 남지 않도록 첫 번째 상황과 함께 묶는다
         block = (heading if i == 0 else []) + [_p(f"■ {group.situation}", s["h3"])]
         for action in group.actions:
             mark = "★ " if action.priority else ""
@@ -238,7 +223,6 @@ def render_report_pdf(report: ReportResponse) -> bytes:
             block.append(Spacer(1, 4))
         story.append(KeepTogether(block))
 
-    # 5. 신고·상담 기관
     rows = [[_p("기관", s["cell_bold"]), _p("전화", s["cell_bold"]), _p("누리집", s["cell_bold"]), _p("용도", s["cell_bold"])]]
     for c in report.contacts:
         rows.append(
@@ -249,7 +233,6 @@ def render_report_pdf(report: ReportResponse) -> bytes:
         _table(rows, [52 * mm, 14 * mm, 46 * mm, width - 112 * mm]),
     ]
 
-    # 6. 분석의 한계
     story.append(_p("8. 분석의 한계", s["h2"]))
     for item in report.limitations:
         story.append(Paragraph(escape(item), s["step"], bulletText="·"))

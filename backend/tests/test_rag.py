@@ -10,7 +10,6 @@ FAKE_CASES = [
 
 @pytest.fixture
 def fake_rag(monkeypatch):
-    """벡터 스토어와 Claude 대신 가짜 함수를 끼워 넣는다."""
     monkeypatch.setattr(
         rag, "_state", {"search_features": lambda url: {"url": url}, "client": object()}
     )
@@ -102,9 +101,6 @@ def test_explain_without_claude_returns_cases_only(fake_rag, monkeypatch):
     assert len(result.similar_cases) == 2
 
 
-# ---- 실제 사례 5,000건으로 검색 (Claude는 부르지 않는다) ----
-
-
 @pytest.fixture
 def real_rag(monkeypatch):
     for key in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
@@ -124,7 +120,6 @@ def test_phishing_url_finds_phishing_cases(real_rag):
 
 
 def test_official_brand_homepage_finds_normal_cases(real_rag):
-    # 'naver'가 의심 키워드로 세어지지 않아야 정상 홈페이지들이 검색된다
     assert labels_of("https://www.naver.com") == [0, 0, 0, 0, 0]
 
 
@@ -133,7 +128,6 @@ def test_similarity_is_sorted_and_in_range(real_rag):
     sims = [c.similarity for c in cases]
     assert sims == sorted(sims, reverse=True)
     assert all(0 < s <= 1 for s in sims)
-    # 예전 문장 임베딩 방식처럼 모든 사례가 같은 점수로 나오지 않는다
     homepage = rag.explain("https://www.naver.com").similar_cases[0].similarity
     assert homepage > sims[0]
 

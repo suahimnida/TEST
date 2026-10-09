@@ -1,26 +1,3 @@
-"""
-피싱 URL 판별 RAG 웹 서비스
-
-동작 방식:
-    1. 입력 URL에서 preprocess.py의 extract_features()로 특징 추출
-    2. build_vector_store.py와 동일한 방식으로 자연어 설명을 만들어 임베딩
-    3. FAISS 벡터 스토어에서 유사한 과거 URL(피싱/정상 라벨 포함) k개 검색 (Retrieval)
-    4. 검색된 사례를 근거(context)로 삼아 Claude에게 최종 판정 + 근거 설명 요청 (Generation)
-    5. JSON으로 판정 결과 반환
-
-사전 준비:
-    1) preprocess.py 로 features_output.csv 생성
-    2) build_vector_store.py 로 vector_store 폴더(FAISS 인덱스) 생성
-    3) 환경변수 ANTHROPIC_API_KEY 설정
-    4) 이 파일을 preprocess.py와 같은 폴더에 두고 실행:
-         uvicorn rag_app:app --reload
-
-사용법 (예시):
-    curl -X POST http://localhost:8000/check \
-        -H "Content-Type: application/json" \
-        -d '{"url": "http://paypal-verify-account.tk/login"}'
-"""
-
 import json
 import os
 
@@ -31,7 +8,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
-from preprocess import extract_features  # 기존 preprocess.py 재사용 (같은 폴더에 있어야 함)
+from preprocess import extract_features 
 
 INDEX_DIR = os.environ.get("RAG_INDEX_DIR", "vector_store")
 TOP_K = int(os.environ.get("RAG_TOP_K", 5))
@@ -40,9 +17,6 @@ CLAUDE_MODEL = "claude-sonnet-4-6"
 
 app = FastAPI(title="피싱 URL 판별 RAG 서비스")
 
-# ---------------------------------------------------------------------------
-# 서버 시작 시 1회만 로드 (매 요청마다 로드하면 느려짐)
-# ---------------------------------------------------------------------------
 print("임베딩 모델 로드 중...")
 embed_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
 
@@ -58,7 +32,7 @@ faiss_index = faiss.read_index(_index_path)
 metadata_df = pd.read_json(_meta_path, lines=True)
 
 print("Anthropic 클라이언트 초기화 중...")
-claude_client = Anthropic()  # ANTHROPIC_API_KEY 환경변수를 자동으로 사용
+claude_client = Anthropic() 
 
 
 class URLRequest(BaseModel):
@@ -66,7 +40,6 @@ class URLRequest(BaseModel):
 
 
 def row_to_description(feats: dict) -> str:
-    """extract_features() 결과를 build_vector_store.py와 동일한 형식의 설명으로 변환."""
     parts = [
         f"URL: {feats['url']}",
         f"URL 길이: {feats['url_length']}",
@@ -87,7 +60,6 @@ def row_to_description(feats: dict) -> str:
 
 
 def retrieve_similar_cases(description: str, k: int = TOP_K) -> pd.DataFrame:
-    """설명 텍스트를 임베딩해 FAISS에서 유사 사례 k개를 검색."""
     query_vec = embed_model.encode(
         [description], convert_to_numpy=True, normalize_embeddings=True
     ).astype("float32")
@@ -98,7 +70,6 @@ def retrieve_similar_cases(description: str, k: int = TOP_K) -> pd.DataFrame:
 
 
 def build_context_block(similar_cases: pd.DataFrame) -> str:
-    """검색된 유사 사례들을 프롬프트에 넣을 텍스트 블록으로 변환."""
     lines = []
     for i, row in enumerate(similar_cases.itertuples(), start=1):
         label_text = "피싱" if row.label == 1 else "정상"
@@ -109,7 +80,6 @@ def build_context_block(similar_cases: pd.DataFrame) -> str:
 
 
 def ask_claude_for_verdict(target_description: str, context_block: str) -> dict:
-    """검색된 유사 사례를 근거로 Claude에게 최종 판정을 요청."""
     system_prompt = (
         "당신은 피싱 URL 탐지 전문가입니다. 아래에 주어지는 '유사 사례'는 "
         "과거에 실제로 피싱/정상으로 판명난 URL들과 그 특징입니다. 이 사례들을 "
@@ -133,26 +103,21 @@ def ask_claude_for_verdict(target_description: str, context_block: str) -> dict:
     try:
         return json.loads(raw_text)
     except json.JSONDecodeError:
-        # 모델이 형식을 어겼을 때를 대비한 폴백
         return {"verdict": "unknown", "confidence": 0.0, "reason": raw_text}
 
 
 @app.post("/check")
 def check_url(request: URLRequest):
-    """URL 하나를 받아 RAG 기반 피싱 여부 판정을 반환."""
     url = request.url.strip()
     if not url:
         raise HTTPException(status_code=400, detail="url이 비어 있습니다.")
 
-    # 1) 특징 추출 (preprocess.py 재사용)
     feats = extract_features(url)
     description = row_to_description(feats)
 
-    # 2) 유사 사례 검색 (Retrieval)
     similar_cases = retrieve_similar_cases(description, k=TOP_K)
     context_block = build_context_block(similar_cases)
 
-    # 3) Claude에게 최종 판정 요청 (Generation)
     verdict = ask_claude_for_verdict(description, context_block)
 
     return {

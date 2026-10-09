@@ -1,9 +1,3 @@
-"""KISA 피싱사이트 블랙리스트 조회.
-
-데이터 담당이 제공하는 urls.json / hosts.json(문자열 배열)을 그대로 읽어 조회만 한다.
-파일 위치는 BLACKLIST_DIR 환경변수로 바꿀 수 있다 (기본: 프로젝트 루트).
-"""
-
 import json
 import os
 from functools import lru_cache
@@ -22,7 +16,6 @@ def _data_dir() -> Path:
 
 @lru_cache(maxsize=1)
 def load_blacklist() -> tuple[frozenset[str], frozenset[str]]:
-    """(urls, hosts) 집합을 반환. 첫 호출 시 1회만 파일을 읽는다."""
     d = _data_dir()
     with open(d / "urls.json", encoding="utf-8") as f:
         urls = frozenset(_normalize_url(u) for u in json.load(f))
@@ -32,7 +25,6 @@ def load_blacklist() -> tuple[frozenset[str], frozenset[str]]:
 
 
 def _normalize_url(url: str) -> str:
-    """스킴과 끝의 '/'를 떼고 호스트만 소문자로 바꾼다 (urls.json 항목과 같은 형태)."""
     url = url.strip()
     if "://" in url:
         url = url.split("://", 1)[1]

@@ -1,21 +1,3 @@
-"""탐지 결과(detections) 생성.
-
-URL 문자열만으로 판단할 수 있는 항목을 규칙 기반으로 분석한다.
-    url        URL 구조   (IP 주소, '@', 퓨니코드, 단축 URL, 의심 키워드 등)
-    url_stats  URL 통계   (도메인 길이, 엔트로피, 숫자 비율)
-    domain     도메인 분석 (피싱에 자주 쓰이는 TLD, 브랜드 사칭, 서브도메인 깊이, HTTPS)
-    html       HTML 분석   → not_analyzed
-    image      페이지 콘텐츠 → not_analyzed
-
-html/image는 실제 페이지에 접속해야 분석할 수 있다. 서버가 의심 사이트에 직접
-접속하면 악성 코드·추적·SSRF 위험이 있어 지금은 분석하지 않는다.
-
-규칙의 기준값은 data/PhiUSIIL_Phishing_URL_Dataset.csv에서 정상 URL이 거의 걸리지
-않도록(정상 오탐 1% 미만) 정했다. 각 항목은 아래 형태로 반환한다.
-    {"status": "suspicious" | "normal" | "not_analyzed",
-     "reasons": [의심 근거 문장], "notes": [참고 정보 문장]}
-"""
-
 import re
 import sys
 from pathlib import Path
@@ -24,23 +6,19 @@ _ML_DIR = Path(__file__).resolve().parents[2] / "ml_integration"
 if str(_ML_DIR) not in sys.path:
     sys.path.append(str(_ML_DIR))
 
-from preprocess import SUSPICIOUS_KEYWORDS, extract_features, safe_urlparse  # noqa: E402
+from preprocess import SUSPICIOUS_KEYWORDS, extract_features, safe_urlparse
 
-# 학습 데이터(PhiUSIIL)에서 200건 이상 등장하고 피싱 비율이 90% 이상인 TLD 중,
-# 정상 서비스 호스팅에도 널리 쓰이는 app/dev/io/co/me 등은 오탐이 커서 제외했다.
 SUSPICIOUS_TLDS = {
-    "tk", "ml", "ga", "cf", "gq",  # 무료 도메인
+    "tk", "ml", "ga", "cf", "gq", 
     "top", "xyz", "site", "link", "club", "shop", "fun", "online", "live", "work", "cloud",
 }
 
-# 두 단계로 된 국가 도메인 (example.co.kr의 등록 도메인은 example.co.kr)
 _TWO_LEVEL_SUFFIXES = {
     "co.kr", "or.kr", "go.kr", "ac.kr", "ne.kr", "re.kr", "pe.kr", "ms.kr", "hs.kr", "es.kr",
     "co.uk", "ac.uk", "gov.uk", "org.uk", "co.jp", "ne.jp", "or.jp", "ac.jp",
     "com.au", "com.cn", "com.br", "co.in", "com.tw", "com.hk", "com.sg",
 }
 
-# 브랜드명 → 공식 등록 도메인. 호스트에 브랜드명이 단어로 들어 있는데 공식 도메인이 아니면 사칭으로 본다
 OFFICIAL_DOMAINS = {
     "paypal": {"paypal.com", "paypal.me"},
     "naver": {"naver.com", "naver.net", "navercorp.com"},
@@ -62,7 +40,6 @@ _SHORT_REASON = {
 
 
 def _registered_domain(host: str) -> str:
-    """mail.example.co.kr → example.co.kr, a.b.example.com → example.com"""
     labels = host.split(".")
     if len(labels) >= 3 and ".".join(labels[-2:]) in _TWO_LEVEL_SUFFIXES:
         return ".".join(labels[-3:])
@@ -85,15 +62,12 @@ def _analyze_url(url: str, host: str, feats: dict, registered: str, official: bo
     if feats["is_shortener"]:
         reasons.append("단축 URL이라 실제로 이동할 주소가 가려져 있습니다.")
 
-    # 의심 키워드는 도메인 부분만 본다 (naver.com/login 같은 정상 경로는 제외)
     host_keywords = [] if official else [kw for kw in SUSPICIOUS_KEYWORDS if kw in host]
     if len(host_keywords) >= 2:
         reasons.append(f"도메인에 의심 키워드 {len(host_keywords)}개({', '.join(host_keywords)})가 들어 있습니다.")
     elif host_keywords:
         notes.append(f"도메인에 의심 키워드 '{host_keywords[0]}'가 들어 있습니다.")
 
-    # 하이픈은 등록 도메인 이름에서만 센다. my-app.vercel.app 같은 호스팅 서비스의
-    # 서브도메인이나 퓨니코드 접두어(xn--)는 정상에서도 흔하다
     dash = registered.replace("xn--", "").count("-")
     if dash >= 3:
         reasons.append(f"도메인 이름({registered})에 하이픈(-)이 {dash}개 있어 여러 단어를 이어 붙인 형태입니다.")
@@ -139,7 +113,6 @@ def _analyze_domain(url: str, host: str, feats: dict, registered: str) -> dict:
     if tld in SUSPICIOUS_TLDS:
         reasons.append(f"'.{tld}'는 피싱 사이트에 자주 쓰이는 최상위 도메인입니다.")
 
-    # 최상위 도메인 자체(예: .google)는 브랜드 사칭으로 보지 않는다
     tokens = set(re.split(r"[.\-]", host.rsplit(".", 1)[0]))
     for brand, officials in OFFICIAL_DOMAINS.items():
         if brand in tokens and registered not in officials:
@@ -166,9 +139,7 @@ _NOT_ANALYZED_NOTE = (
 
 
 def analyze(url: str) -> dict:
-    """Detections 스키마에 맞는 dict를 반환한다. 오류가 나면 해당 항목은 None."""
     feats = extract_features(url)
-    # hostname은 'user@'와 포트를 뺀 순수 호스트 이름이다
     host = (safe_urlparse(url).hostname or "").lower().strip(".")
     registered = host if feats["is_ip_domain"] else _registered_domain(host)
     official = any(registered in o for o in OFFICIAL_DOMAINS.values())

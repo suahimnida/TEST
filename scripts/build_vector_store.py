@@ -1,17 +1,3 @@
-"""
-RAG용 벡터 스토어 구축 스크립트
-
-preprocess.py로 생성한 features_output.csv를 읽어서,
-각 URL의 특징을 자연어 설명으로 변환한 뒤 임베딩하고
-FAISS 인덱스로 저장합니다.
-
-사전 준비:
-    python preprocess.py --input PhiUSIIL_Phishing_URL_Dataset.csv --output features_output.csv
-
-사용법:
-    python build_vector_store.py --input features_output.csv --index-dir vector_store
-"""
-
 import argparse
 import os
 
@@ -23,7 +9,6 @@ EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 
 def row_to_description(row: pd.Series) -> str:
-    """특징 행 하나를 자연어 설명 문장으로 변환 (임베딩 대상 텍스트)."""
     label_text = "피싱(phishing)" if row["label"] == 1 else "정상(legitimate)"
     parts = [
         f"URL: {row['url']}",
@@ -64,17 +49,16 @@ def main():
         batch_size=64,
         show_progress_bar=True,
         convert_to_numpy=True,
-        normalize_embeddings=True,  # 코사인 유사도를 위해 정규화
+        normalize_embeddings=True, 
     ).astype("float32")
 
     print("[4/4] FAISS 인덱스 생성 및 저장 중...")
     os.makedirs(args.index_dir, exist_ok=True)
     dim = embeddings.shape[1]
-    index = faiss.IndexFlatIP(dim)  # 정규화된 벡터 + 내적 = 코사인 유사도
+    index = faiss.IndexFlatIP(dim) 
     index.add(embeddings)
     faiss.write_index(index, os.path.join(args.index_dir, "phishing_index.faiss"))
 
-    # 메타데이터(원본 URL, 라벨, 설명, 주요 특징)는 별도로 저장해서 검색 결과와 매칭
     meta_cols = [
         "url", "label", "description", "url_length", "special_char_ratio",
         "digit_ratio", "is_ip_domain", "has_punycode",

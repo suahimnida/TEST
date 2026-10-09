@@ -1,20 +1,3 @@
-"""
-피싱 URL 분석 프로젝트 - ML 모델 학습 스크립트
-
-입력: preprocess.py로 만든 features_output.csv
-      (url, label, url_length, host_length, ... top_3gram_1~3 컬럼 포함)
-출력: 학습된 모델(.joblib) + 성능 리포트(model_report.json)
-
-사용법:
-    python train_model.py --input features_output.csv --output-dir models/
-
-- Logistic Regression / Random Forest / XGBoost 세 가지를 모두 학습하고
-  검증 데이터 기준 ROC-AUC가 가장 높은 모델을 best model로 저장합니다.
-- top_3gram_1~3(문자열 참고용 컬럼)과 url 원문은 수치형 모델 입력에서 제외합니다.
-
-작성자: 성주 (AI 개발자)
-"""
-
 import argparse
 import json
 import os
@@ -39,7 +22,6 @@ try:
 except ImportError:
     HAS_XGB = False
 
-# 모델 입력에서 제외할 컬럼 (원문/참고용 컬럼)
 DROP_COLS = ["url", "label", "top_3gram_1", "top_3gram_2", "top_3gram_3"]
 
 
@@ -92,13 +74,11 @@ def main():
     results = {}
     models = {}
 
-    # Logistic Regression (스케일링된 입력 사용)
     lr = LogisticRegression(max_iter=1000, random_state=args.random_state)
     lr.fit(X_train_scaled, y_train)
     results["logistic_regression"] = evaluate(lr, X_test_scaled, y_test)
-    models["logistic_regression"] = (lr, True)  # True = 스케일링 필요
+    models["logistic_regression"] = (lr, True) 
 
-    # Random Forest (트리 기반, 스케일링 불필요)
     rf = RandomForestClassifier(
         n_estimators=300, max_depth=None, random_state=args.random_state, n_jobs=-1
     )
@@ -106,7 +86,6 @@ def main():
     results["random_forest"] = evaluate(rf, X_test, y_test)
     models["random_forest"] = (rf, False)
 
-    # XGBoost
     if HAS_XGB:
         xgb = XGBClassifier(
             n_estimators=300,

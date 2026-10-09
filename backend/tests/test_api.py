@@ -43,7 +43,6 @@ def test_create_analysis_fills_model_field(monkeypatch):
 
     body = client.post("/api/v1/analyses", json={"url": "http://evil.tk/x"}).json()
     assert body["model"] == {"status": "ready", "risk_score": 83.2, "label": "phishing"}
-    # RAG 점수가 생기기 전까지는 ML 점수로 최종 판정한다
     assert body["verdict"] == "phishing"
     assert body["risk_score"] == 83.2
     assert body["risk_level"] == "warning"

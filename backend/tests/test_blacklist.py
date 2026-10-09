@@ -7,7 +7,6 @@ from app.services import blacklist
 
 @pytest.fixture
 def fake_blacklist(tmp_path, monkeypatch):
-    """실제 KISA 파일 대신 작은 테스트용 목록을 쓴다."""
     (tmp_path / "urls.json").write_text(
         json.dumps(["evil.com/login", "Phish.KR/a/b"]), encoding="utf-8"
     )
@@ -42,7 +41,6 @@ def test_check_blacklist(fake_blacklist, url, match_type):
 
 
 def test_real_files_load():
-    """프로젝트 루트의 실제 KISA 파일이 문제없이 로드되는지 확인."""
     blacklist.load_blacklist.cache_clear()
     urls, hosts = blacklist.load_blacklist()
     assert len(urls) > 0 and len(hosts) > 0

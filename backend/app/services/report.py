@@ -1,23 +1,3 @@
-"""분석 리포트 작성 (두번째 OpenAI 키).
-
-리포트 생성 버튼을 누르면
-    1) followup.research()  첫번째 키로 후속 조치를 조사하고
-    2) generate_report()    두번째 키로 탐지 결과·유사 사례·AI 분석 설명·후속 조치를 정리한다.
-
-리포트 작성 원칙
-    - 사실은 서버가 채운다: 점수·판정·근거 수치, 신고 기관 전화번호와 주소, 조치 단계.
-      LLM이 전화번호나 주소를 지어내도 리포트에 들어가지 않는다.
-    - 이 LLM은 요약과 위험 분석 두 가지 서술만 쓴다.
-    - LLM을 쓸 수 없어도 리포트는 나온다: 같은 양식을 템플릿 문장으로 채운다.
-
-모델명 지정 (환경변수가 우선)
-    REPORT_OPENAI_MODEL 이 없으면 아래 DEFAULT_REPORT_MODEL을 쓴다.
-키/토큰 (둘 중 하나)
-    REPORT_OPENAI_API_KEY 또는 REPORT_OPENAI_AUTH_TOKEN
-중간 서버 주소
-    REPORT_OPENAI_BASE_URL (예: https://copa.codyssey.kr → 자동으로 /v1을 붙인다)
-"""
-
 import json
 import logging
 from datetime import datetime, timezone
@@ -43,9 +23,6 @@ from app.services.followup import (
 
 logger = logging.getLogger(__name__)
 
-# 코디세이 API 문서의 OpenAI 모델 (REPORT_OPENAI_MODEL 환경변수가 있으면 그 값이 우선)
-# 이미 정리된 사실을 문단 두 개로 쓰는 일이라 gpt-5.4-mini (차감 배수 0.5)로 충분하다.
-# 다른 선택지: gpt-5.4 (배수 1), gpt-5-mini (배수 0.5)
 DEFAULT_REPORT_MODEL = "gpt-5.4-mini"
 
 LEVEL_KO = {"safe": "안전", "caution": "주의", "warning": "경고", "danger": "위험"}
@@ -100,12 +77,6 @@ REFERENCES = [
     "금융결제원 계좌정보통합관리서비스 (payinfo.or.kr)",
     "한국정보통신진흥협회 명의도용방지서비스 (msafer.or.kr)",
 ]
-
-
-# ---------------------------------------------------------------------------
-# 판정 근거 (사실, 서버가 작성)
-# ---------------------------------------------------------------------------
-
 
 def build_evidence(analysis: AnalysisResponse) -> list[ReportEvidence]:
     evidence = []
@@ -283,7 +254,6 @@ def generate_report(
     client=None,
     analyzed_at: str | None = None,
 ) -> ReportResponse:
-    """리포트를 만든다. client(OpenAIJsonClient, 두번째 키)가 없거나 실패하면 템플릿으로 채운다."""
     evidence = build_evidence(analysis)
 
     if client is not None:

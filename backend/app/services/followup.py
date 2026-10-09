@@ -1,24 +1,3 @@
-"""후속 조치 조사 (첫번째 OpenAI 키).
-
-탐지 결과, 유사 사례, AI 분석 설명(RAG)을 근거로 이 URL에서 예상되는 피해 유형을 추론하고,
-아래 ACTIONS(공식 기관 안내로 검증한 조치 목록) 중 우선 조치를 고르고 그 이유를 쓴다.
-조치 단계·연락처는 LLM이 바꾸지 못하며, LLM은 "무엇을 왜 먼저 해야 하는지"만 판단한다.
-
-모델명 지정 (환경변수가 우선)
-    FOLLOWUP_OPENAI_MODEL 이 없으면 아래 DEFAULT_FOLLOWUP_MODEL을 쓴다.
-키/토큰 (둘 중 하나)
-    FOLLOWUP_OPENAI_API_KEY 또는 FOLLOWUP_OPENAI_AUTH_TOKEN
-중간 서버 주소
-    FOLLOWUP_OPENAI_BASE_URL (예: https://copa.codyssey.kr → 자동으로 /v1을 붙인다)
-
-키가 없거나 호출이 실패하면 판정별 기본 우선 조치로 대신한다 (generated_by="template").
-
-후속 조치 출처 (2026-10 확인)
-    한국인터넷진흥원 보호나라·118, 경찰청 사이버범죄 신고시스템(ECRM),
-    금융감독원 개인정보노출자 사고예방시스템, 금융결제원 계좌정보통합관리서비스,
-    한국정보통신진흥협회 명의도용방지서비스(엠세이퍼), 시중은행 금융사기 대응 안내.
-"""
-
 import json
 import logging
 from typing import Literal
@@ -29,14 +8,7 @@ from app.schemas import AnalysisResponse, FollowupResult
 
 logger = logging.getLogger(__name__)
 
-# 코디세이 API 문서의 OpenAI 모델 (FOLLOWUP_OPENAI_MODEL 환경변수가 있으면 그 값이 우선)
-# 근거를 보고 피해 유형과 조치 우선순위를 추론해야 해서 gpt-5.4 (차감 배수 1)를 쓴다.
-# 다른 선택지: gpt-5.5 (배수 2, 더 정교), gpt-5.4-mini / gpt-5-mini (배수 0.5, 더 저렴)
 DEFAULT_FOLLOWUP_MODEL = "gpt-5.4"
-
-# ---------------------------------------------------------------------------
-# 후속 조치 (상황별)
-# ---------------------------------------------------------------------------
 
 SITUATIONS = [
     ("not_visited", "링크만 받았거나 아직 접속하지 않은 경우"),
@@ -142,7 +114,6 @@ ACTIONS = {
     },
 }
 
-# 판정별로 보여줄 상황. 정상 판정이라도 기본 예방 조치는 안내한다.
 SITUATIONS_BY_VERDICT = {
     "phishing": [s for s, _ in SITUATIONS],
     "suspicious": ["not_visited", "visited", "entered_account", "entered_personal"],
@@ -170,12 +141,7 @@ def allowed_action_ids(verdict: str | None) -> set[str]:
     situations = SITUATIONS_BY_VERDICT.get(verdict or "suspicious", SITUATIONS_BY_VERDICT["suspicious"])
     return {aid for aid, a in ACTIONS.items() if a["situation"] in situations}
 
-
-# ---------------------------------------------------------------------------
-# LLM 응답 형식 (구조화 출력 스키마)
-# ---------------------------------------------------------------------------
-
-ActionId = Literal[tuple(ACTIONS)]  # 목록 밖의 조치 ID는 스키마에서 막는다
+ActionId = Literal[tuple(ACTIONS)]  
 
 
 class ActionNote(BaseModel):
@@ -239,7 +205,6 @@ def _facts(analysis: AnalysisResponse) -> str:
 
 
 def _template(analysis: AnalysisResponse) -> FollowupResult:
-    """LLM을 쓸 수 없을 때: 판정별 기본 우선 조치와 탐지 근거로 만든 요약."""
     verdict = analysis.verdict or "suspicious"
     reasons = []
     for key in ("url", "url_stats", "domain"):
@@ -267,7 +232,6 @@ def _template(analysis: AnalysisResponse) -> FollowupResult:
 
 
 def research(analysis: AnalysisResponse, client=None) -> FollowupResult:
-    """후속 조치를 조사한다. client(OpenAIJsonClient)가 없거나 실패하면 템플릿으로 대신한다."""
     if client is None:
         return _template(analysis)
 

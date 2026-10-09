@@ -21,7 +21,6 @@ def test_blacklist_match_is_phishing_without_model():
         (45.0, "suspicious", "caution"),
         (72.0, "phishing", "warning"),
         (95.0, "phishing", "danger"),
-        # 경계값: 아래 경계는 위 구간에 속한다
         (29.99, "normal", "safe"),
         (30.0, "suspicious", "caution"),
         (59.99, "suspicious", "caution"),

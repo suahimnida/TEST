@@ -2,7 +2,6 @@ from app.services import model
 
 
 def test_predict_returns_score_in_range():
-    # 실제 학습된 모델 파일(codes/ml_integration/models)로 예측한다
     result = model.predict("http://secure-paypal-login.verify-account.tk")
     assert result.status == "ready"
     assert 0 <= result.risk_score <= 100

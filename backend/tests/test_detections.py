@@ -13,10 +13,10 @@ def statuses(url):
     [
         "https://www.naver.com",
         "naver.com",
-        "https://nid.naver.com/nidlogin.login?mode=form",  # 공식 도메인의 login 경로
+        "https://nid.naver.com/nidlogin.login?mode=form", 
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        "https://phishing-link-checker-five.vercel.app",  # 호스팅 서비스 서브도메인의 하이픈
-        "https://portal.sch.ac.kr",  # 두 단계 국가 도메인
+        "https://phishing-link-checker-five.vercel.app",
+        "https://portal.sch.ac.kr", 
         "https://www.paypal.com/signin",
     ],
 )
@@ -30,7 +30,7 @@ def test_brand_impersonation_and_tld():
     assert result["domain"]["status"] == "suspicious"
     reasons = " ".join(result["domain"]["reasons"])
     assert "'.tk'" in reasons and "'paypal'" in reasons
-    assert result["url"]["status"] == "suspicious"  # 도메인 안의 의심 키워드
+    assert result["url"]["status"] == "suspicious" 
 
 
 def test_ip_at_punycode_shortener():
