@@ -1,12 +1,8 @@
-// 백엔드 API 호출은 모두 이 파일에서 한다.
-// 페이지 컴포넌트는 fetch를 직접 쓰지 않고 아래 함수만 불러 쓴다.
-
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 const CLIENT_ID_KEY = "phishingClientId";
 
-// 공통 요청 함수: 응답이 실패면 에러를 던지고, 성공이면 JSON을 돌려준다.
 async function request(path, options, errorMessage) {
   const response = await fetch(`${API_BASE_URL}${path}`, options);
 
@@ -17,12 +13,10 @@ async function request(path, options, errorMessage) {
   return response.json();
 }
 
-// 이 브라우저에 저장된 ID만 확인한다. 없으면 null (새로 발급하지 않음).
 export function getSavedClientId() {
   return localStorage.getItem(CLIENT_ID_KEY);
 }
 
-// 저장된 ID가 없으면 백엔드에서 새로 발급받아 저장한다.
 export async function getClientId() {
   const savedClientId = getSavedClientId();
 
@@ -41,7 +35,6 @@ export async function getClientId() {
   return data.client_id;
 }
 
-// URL 분석 요청
 export async function analyzeUrl(url, isPublic = false) {
   const clientId = await getClientId();
 
@@ -62,7 +55,6 @@ export async function analyzeUrl(url, isPublic = false) {
   );
 }
 
-// 이 브라우저의 분석 기록 목록. 백엔드 응답 { items: [...] }에서 배열만 돌려준다.
 export async function listMyAnalyses() {
   const clientId = await getClientId();
 
@@ -79,7 +71,6 @@ export async function listMyAnalyses() {
   return Array.isArray(data.items) ? data.items : [];
 }
 
-// 분석 결과 하나 조회
 export async function getAnalysis(analysisId) {
   const clientId = await getClientId();
 
@@ -94,8 +85,6 @@ export async function getAnalysis(analysisId) {
   );
 }
 
-// 분석 리포트 생성. 이미 만든 리포트가 있으면 서버가 저장된 것을 돌려준다.
-// regenerate가 true면 새로 만든다.
 export async function createReport(analysisId, regenerate = false) {
   const clientId = await getClientId();
 
@@ -111,7 +100,6 @@ export async function createReport(analysisId, regenerate = false) {
   );
 }
 
-// 리포트 PDF 파일(Blob)
 export async function fetchReportPdf(analysisId) {
   const clientId = await getClientId();
 
