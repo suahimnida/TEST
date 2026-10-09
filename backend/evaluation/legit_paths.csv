@@ -1,0 +1,82 @@
+url,korean,note
+https://blog.naver.com/pyc0428/223456789012,1,블로그 글
+https://m.blog.naver.com/PostView.naver?blogId=pyc0428&logNo=223456789012,1,모바일 블로그 글
+https://n.news.naver.com/article/001/0014312345,1,뉴스 기사
+https://news.naver.com/main/read.naver?mode=LSD&mid=sec&sid1=105&oid=001&aid=0014312345,1,뉴스 기사 (옛 주소)
+https://cafe.naver.com/joonggonara/1023456789,1,카페 글
+https://map.naver.com/p/search/%EC%88%9C%EC%B2%9C%EC%97%AD,1,지도 검색
+https://search.naver.com/search.naver?where=nexearch&query=%ED%94%BC%EC%8B%B1,1,검색 결과
+https://nid.naver.com/nidlogin.login?mode=form&url=https://www.naver.com/,1,로그인 페이지
+https://mail.naver.com/v2/folders/0/all,1,메일
+https://shopping.naver.com/home,1,쇼핑
+https://smartstore.naver.com/example_store/products/5678901234,1,스마트스토어 상품
+https://accounts.kakao.com/login/?continue=https%3A%2F%2Fwww.kakao.com,1,로그인 페이지
+https://pf.kakao.com/_xgxkLxj,1,카카오톡 채널
+https://map.kakao.com/?q=%EC%84%9C%EC%9A%B8%EC%97%AD,1,지도 검색
+https://v.daum.net/v/20261008123456789,1,뉴스 기사
+https://cafe.daum.net/subdued20club/ReHf/1234567,1,카페 글
+https://www.coupang.com/vp/products/7339012345?itemId=18712345678&vendorItemId=85912345678,1,상품
+https://login.coupang.com/login/login.pang?rtnUrl=https%3A%2F%2Fwww.coupang.com,1,로그인 페이지
+https://item.gmarket.co.kr/Item?goodscode=2345678901,1,상품
+https://www.11st.co.kr/products/5123456789,1,상품
+https://www.musinsa.com/products/3456789,1,상품
+https://www.yes24.com/Product/Goods/123456789,1,도서
+https://product.kyobobook.co.kr/detail/S000212345678,1,도서
+https://www.melon.com/song/detail.htm?songId=36123456,1,음원
+https://obank.kbstar.com/quics?page=C016505,1,은행 로그인
+https://www.shinhan.com/hpe/index.jsp#252400000000,1,은행
+https://www.kakaobank.com/view/event,1,은행 이벤트
+https://toss.im/career/jobs,1,채용
+https://www.samsung.com/sec/smartphones/galaxy-s25/buy/,1,상품
+https://www.korail.com/ticket/search/general,1,승차권 예매
+https://www.gov.kr/portal/service/serviceInfo/PTR000050463,1,정부 민원
+https://www.hometax.go.kr/websquare/websquare.html?w2xPath=/ui/pp/index.xml,1,홈택스
+https://www.boho.or.kr/kr/bbs/list.do?menuNo=205020&bbsId=B0000133,1,보안 공지
+https://ecrm.police.go.kr/minwon/main,1,사이버범죄 신고
+https://pd.fss.or.kr/main.do,1,개인정보노출 등록
+https://www.chosun.com/national/2026/10/08/ABCDEFGHIJKLMNOPQRSTUVWX/,1,뉴스 기사
+https://www.yna.co.kr/view/AKR20261008012345001,1,뉴스 기사
+https://gall.dcinside.com/board/view/?id=programming&no=2345678,1,게시글
+https://bbs.ruliweb.com/community/board/300143/read/67890123,1,게시글
+https://maplestory.nexon.com/News/Notice/123456,1,게임 공지
+https://portal.snu.ac.kr/portal/login,1,학교 포털 로그인
+https://www.kaist.ac.kr/kr/html/campus/053001.html?mode=V&mng_no=123456,1,학교 공지
+https://www.youtube.com/watch?v=dQw4w9WgXcQ,0,영상
+https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL9tY0BWXOZFt5Z0Z3,0,영상 재생목록
+https://youtu.be/dQw4w9WgXcQ,0,단축 공유 링크
+https://github.com/suahimnida/TEST,0,저장소
+https://github.com/python/cpython/blob/main/Lib/urllib/parse.py,0,소스 파일
+https://github.com/login,0,로그인 페이지
+https://accounts.google.com/signin/v2/identifier?service=mail,0,로그인 페이지
+https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view?usp=sharing,0,파일 공유
+https://docs.google.com/forms/d/e/1FAIpQLSf_example123/viewform,0,설문
+https://www.google.com/search?q=phishing+url+checker,0,검색 결과
+https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=abc,0,로그인 페이지
+https://learn.microsoft.com/ko-kr/azure/storage/blobs/storage-blobs-introduction,0,문서
+https://support.apple.com/ko-kr/102631,0,고객지원
+https://www.amazon.com/dp/B08N5WRWNW,0,상품
+https://ko.wikipedia.org/wiki/%ED%94%BC%EC%8B%B1,0,위키 문서
+https://en.wikipedia.org/wiki/Phishing,0,위키 문서
+https://stackoverflow.com/questions/1602934/check-if-a-given-key-already-exists-in-a-dictionary,0,질문
+https://www.reddit.com/r/Python/comments/1abcde2/example_post/,0,게시글
+https://www.instagram.com/p/C1a2b3c4d5e/,0,게시물
+https://www.linkedin.com/in/example-profile-123456/,0,프로필
+https://www.netflix.com/title/80057281,0,작품
+https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC,0,음원
+https://www.notion.so/example/Project-Plan-1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d,0,문서
+https://www.figma.com/design/AbCdEf123456/Example-Design?node-id=0-1,0,디자인 파일
+https://us02web.zoom.us/j/81234567890?pwd=AbCdEfGhIjKlMnOp,0,회의 링크
+https://www.dropbox.com/scl/fi/abc123def456/report.pdf?rlkey=xyz789&dl=0,0,파일 공유
+https://www.paypal.com/signin,0,로그인 페이지
+https://www.paypal.com/myaccount/summary,0,계정 화면
+https://platform.openai.com/docs/guides/structured-outputs,0,문서
+https://docs.python.org/3/library/urllib.parse.html,0,문서
+https://www.npmjs.com/package/react,0,패키지
+https://vercel.com/docs/deployments/overview,0,문서
+https://render.com/docs/free,0,문서
+https://developers.cloudflare.com/dns/manage-dns-records/,0,문서
+https://www.nytimes.com/2026/10/08/technology/ai-security.html,0,뉴스 기사
+https://www.bbc.co.uk/news/technology-12345678,0,뉴스 기사
+https://phishing-link-checker-five.vercel.app,0,우리 서비스 (무료 호스팅 하위 도메인)
+https://my-portfolio.github.io/projects/,0,개인 페이지 (무료 호스팅)
+https://example-app.web.app/,0,개인 앱 (무료 호스팅)
