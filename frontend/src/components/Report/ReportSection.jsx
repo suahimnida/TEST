@@ -90,12 +90,12 @@ function ReportSection({ analysisId }) {
   const [pdfBusy, setPdfBusy] = useState(null); // view | save | null
   const [message, setMessage] = useState("");
 
-  async function handleGenerate(regenerate = false) {
+  async function handleGenerate() {
     setStatus("loading");
     setMessage("");
 
     try {
-      setReport(await createReport(analysisId, regenerate));
+      setReport(await createReport(analysisId));
       setStatus("idle");
     } catch (error) {
       console.error(error);
@@ -170,17 +170,18 @@ function ReportSection({ analysisId }) {
           </p>
         </div>
 
+        {/* 리포트는 분석 1건당 한 번만 만든다. 생성 후에는 버튼을 완료 상태로 둔다 */}
         <button
-          className="report-button"
-          onClick={() => handleGenerate(Boolean(report))}
-          disabled={loading}
+          className={`report-button ${report ? "done" : ""}`}
+          onClick={handleGenerate}
+          disabled={loading || Boolean(report)}
         >
           {loading
             ? "리포트 작성 중..."
             : report
-            ? "리포트 다시 생성"
+            ? "리포트 생성 완료"
             : "리포트 생성"}
-          <span>→</span>
+          <span>{report ? "✓" : "→"}</span>
         </button>
       </div>
 
