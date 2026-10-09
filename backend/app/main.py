@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 # backend/.env의 값을 환경변수로 읽어온다 (이미 설정된 환경변수가 우선)
@@ -32,8 +32,19 @@ from app.schemas import (
     Detections,
     HealthResponse,
     ModelResult,
+    ReportResponse,
 )
-from app.services import blacklist, detections, model, rag, verdict
+from app.services import (
+    blacklist,
+    detections,
+    followup,
+    model,
+    rag,
+    report,
+    report_pdf,
+    verdict,
+)
+from app.services.llm_openai import OpenAIJsonClient
 
 
 @asynccontextmanager
@@ -145,3 +156,77 @@ def read_analysis(analysis_id: str, x_client_id: uuid.UUID | None = Header(None)
     if result is None:
         raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
     return result
+
+
+# ---------------------------------------------------------------------------
+# 분석 리포트
+# ---------------------------------------------------------------------------
+
+# OpenAI 클라이언트는 처음 쓸 때 한 번만 만든다. 키나 모델이 없으면 None (템플릿으로 대신).
+_llm_clients: dict = {}
+
+
+def _followup_client():
+    """첫번째 OpenAI 키: 후속 조치 조사"""
+    if "followup" not in _llm_clients:
+        _llm_clients["followup"] = OpenAIJsonClient.from_env(
+            "FOLLOWUP", "후속 조치 조사", followup.DEFAULT_FOLLOWUP_MODEL
+        )
+    return _llm_clients["followup"]
+
+
+def _report_client():
+    """두번째 OpenAI 키: 리포트 작성"""
+    if "report" not in _llm_clients:
+        _llm_clients["report"] = OpenAIJsonClient.from_env(
+            "REPORT", "리포트 작성", report.DEFAULT_REPORT_MODEL
+        )
+    return _llm_clients["report"]
+
+
+def _load_report(analysis_id: str, client_key: str | None, regenerate: bool) -> ReportResponse:
+    record = db.get_analysis_record(analysis_id, client_key)
+    if record is None:
+        raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
+    analysis, analyzed_at = record
+
+    if not regenerate:
+        cached = db.get_report(analysis_id)
+        if cached is not None:
+            return cached
+
+    # 1) 첫번째 키로 후속 조치 조사 → 2) 두번째 키로 리포트 작성
+    research = followup.research(analysis, client=_followup_client())
+    result = report.generate_report(
+        analysis, research, client=_report_client(), analyzed_at=analyzed_at
+    )
+    # 저장에 실패해도 만든 리포트는 돌려준다 (다음에 다시 만들면 된다)
+    try:
+        db.save_report(result)
+    except Exception:
+        logger.exception("리포트 저장 실패: %s", analysis_id)
+    return result
+
+
+@app.post("/api/v1/analyses/{analysis_id}/report", response_model=ReportResponse)
+def create_report(
+    analysis_id: str,
+    regenerate: bool = Query(False, description="true면 저장된 리포트를 무시하고 새로 만든다"),
+    x_client_id: uuid.UUID | None = Header(None),
+):
+    """분석 결과로 리포트를 만든다. 이미 만든 리포트가 있으면 그대로 돌려준다 (LLM 비용 절약)."""
+    return _load_report(analysis_id, _client_key(x_client_id), regenerate)
+
+
+@app.get("/api/v1/analyses/{analysis_id}/report.pdf")
+def download_report_pdf(analysis_id: str, x_client_id: uuid.UUID | None = Header(None)):
+    """리포트 PDF. 리포트가 아직 없으면 먼저 만든다."""
+    result = _load_report(analysis_id, _client_key(x_client_id), regenerate=False)
+    pdf = report_pdf.render_report_pdf(result)
+    filename = f"phishing-report-{analysis_id[:8]}.pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+

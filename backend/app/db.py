@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from app.schemas import AnalysisResponse, AnalysisSummary
+from app.schemas import AnalysisResponse, AnalysisSummary, ReportResponse
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +89,16 @@ def init_db() -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_analyses_public ON analyses (is_public, created_at)"
         )
+        # 분석 1건당 리포트 1개. 다시 만들면 덮어쓴다
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS reports (
+                analysis_id TEXT PRIMARY KEY,
+                created_at  TEXT NOT NULL,
+                report_json TEXT NOT NULL
+            )
+            """
+        )
 
 
 def save_analysis(result: AnalysisResponse, client_id: str | None) -> None:
@@ -122,6 +132,44 @@ def get_analysis(analysis_id: str, client_id: str | None) -> AnalysisResponse | 
     if row is None:
         return None
     return AnalysisResponse.model_validate_json(row["result_json"])
+
+
+def get_analysis_record(analysis_id: str, client_id: str | None):
+    """get_analysis와 같은 권한 규칙으로 (분석 결과, 저장 시각)을 반환한다. 없으면 None."""
+    with _connect() as (conn, p):
+        row = conn.execute(
+            f"SELECT result_json, created_at FROM analyses "
+            f"WHERE id = {p} AND (is_public = 1 OR client_id = {p})",
+            (analysis_id, client_id),
+        ).fetchone()
+
+    if row is None:
+        return None
+    return AnalysisResponse.model_validate_json(row["result_json"]), row["created_at"]
+
+
+def save_report(report: ReportResponse) -> None:
+    with _connect() as (conn, p):
+        conn.execute(
+            f"""
+            INSERT INTO reports (analysis_id, created_at, report_json) VALUES ({p}, {p}, {p})
+            ON CONFLICT (analysis_id) DO UPDATE
+            SET created_at = excluded.created_at, report_json = excluded.report_json
+            """,
+            (report.analysis_id, report.created_at, report.model_dump_json()),
+        )
+
+
+def get_report(analysis_id: str) -> ReportResponse | None:
+    """권한 확인은 하지 않는다. 호출 전에 get_analysis_record로 분석 결과 접근 권한을 확인할 것."""
+    with _connect() as (conn, p):
+        row = conn.execute(
+            f"SELECT report_json FROM reports WHERE analysis_id = {p}", (analysis_id,)
+        ).fetchone()
+
+    if row is None:
+        return None
+    return ReportResponse.model_validate_json(row["report_json"])
 
 
 def list_analyses(limit: int, client_id: str | None = None) -> list[AnalysisSummary]:

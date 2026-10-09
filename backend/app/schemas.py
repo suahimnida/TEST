@@ -106,3 +106,74 @@ class ClientResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
+
+
+# ---------------------------------------------------------------------------
+# 분석 리포트
+#
+# 후속 조치 조사 (app/services/followup.py, 첫번째 OpenAI 키)
+#     탐지 결과·유사 사례·AI 분석 설명으로 예상 피해를 추론하고 우선 조치를 고른다.
+# 리포트 작성 (app/services/report.py, 두번째 OpenAI 키)
+#     위 결과를 모두 받아 요약과 위험 분석을 쓴다.
+# 사실(점수, 판정, 기관 연락처, 조치 단계)은 두 LLM 모두 바꾸지 못하고 서버가 채운다.
+# ---------------------------------------------------------------------------
+
+
+class FollowupResult(BaseModel):
+    research_summary: str  # 예상 피해 유형과 대응 방향
+    priority_action_ids: list[str]
+    action_notes: dict[str, str]  # 조치 id → 이 URL에서 필요한 이유
+    generated_by: str  # 조사한 모델 이름, 또는 "template"
+
+
+class ReportEvidence(BaseModel):
+    """판정 근거 한 줄. used_in_verdict가 True인 근거만 최종 점수 계산에 쓰였다."""
+
+    source: str  # "KISA 블랙리스트", "ML 모델", "탐지 결과", "유사 사례", "AI 분석"
+    finding: str
+    used_in_verdict: bool
+
+
+class ReportAction(BaseModel):
+    id: str
+    title: str
+    steps: list[str]
+    priority: bool = False  # 이 URL에 특히 필요한 조치로 선택됨
+    note: str | None = None  # LLM이 이 URL 상황에 맞춰 덧붙인 설명
+
+
+class ReportActionGroup(BaseModel):
+    """상황별 조치 묶음. 사용자가 어디까지 진행했는지는 서버가 알 수 없으므로 상황별로 안내한다."""
+
+    situation: str  # "링크만 받았거나 아직 접속하지 않은 경우" 등
+    actions: list[ReportAction]
+
+
+class ReportContact(BaseModel):
+    name: str
+    phone: str | None = None
+    url: str | None = None
+    purpose: str
+
+
+class ReportResponse(BaseModel):
+    analysis_id: str
+    created_at: str
+    generated_by: str  # 리포트를 작성한 모델 이름(두번째 키), 또는 "template"
+    followup_by: str  # 후속 조치를 조사한 모델 이름(첫번째 키), 또는 "template"
+    url: str
+    verdict: Literal["phishing", "suspicious", "normal"] | None = None
+    risk_score: float | None = None
+    risk_level: Literal["safe", "caution", "warning", "danger"] | None = None
+    confidence: float | None = None
+    analyzed_at: str | None = None
+    summary: str
+    risk_assessment: str
+    evidence: list[ReportEvidence]
+    similar_cases: list[SimilarCase] = []
+    ai_analysis: str | None = None  # 분석 결과 화면의 AI 분석 설명 (RAG)
+    followup_summary: str  # 후속 조치 조사 결과
+    action_groups: list[ReportActionGroup]
+    contacts: list[ReportContact]
+    limitations: list[str]
+    references: list[str]
