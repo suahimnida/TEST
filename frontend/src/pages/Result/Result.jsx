@@ -1,3 +1,4 @@
+import ReportSection from "../../components/Report/ReportSection";
 import "./Result.css";
 
 const detectionLabels = {
@@ -643,26 +644,8 @@ function Result({ url, result }) {
           </div>
         )}
 
-      {/* Report */}
-      <div className="report-card">
-        <div>
-          <p className="report-label">
-            자동 리포트
-          </p>
-
-          <h3>AI 분석 리포트 생성</h3>
-
-          <p>
-            현재 분석 결과를 바탕으로 보안 분석
-            리포트를 생성합니다.
-          </p>
-        </div>
-
-        <button className="report-button">
-          리포트 생성
-          <span>→</span>
-        </button>
-      </div>
+      {/* Report: 리포트 생성, PDF 보기·저장. 다른 분석 결과로 바뀌면 key로 상태를 초기화한다 */}
+      {data.id && <ReportSection key={data.id} analysisId={data.id} />}
     </section>
   );
 }

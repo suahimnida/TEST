@@ -93,3 +93,44 @@ export async function getAnalysis(analysisId) {
     "분석 결과 조회 실패"
   );
 }
+
+// 분석 리포트 생성. 이미 만든 리포트가 있으면 서버가 저장된 것을 돌려준다.
+// regenerate가 true면 새로 만든다.
+export async function createReport(analysisId, regenerate = false) {
+  const clientId = await getClientId();
+
+  return request(
+    `/api/v1/analyses/${analysisId}/report${regenerate ? "?regenerate=true" : ""}`,
+    {
+      method: "POST",
+      headers: {
+        "X-Client-Id": clientId,
+      },
+    },
+    "리포트 생성 실패"
+  );
+}
+
+// 리포트 PDF 파일(Blob)
+export async function fetchReportPdf(analysisId) {
+  const clientId = await getClientId();
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/analyses/${analysisId}/report.pdf`,
+    {
+      headers: {
+        "X-Client-Id": clientId,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`PDF 생성 실패: ${response.status}`);
+  }
+
+  return response.blob();
+}
+
+export function reportFileName(analysisId) {
+  return `phishing-report-${String(analysisId).slice(0, 8)}.pdf`;
+}
