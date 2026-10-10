@@ -84,6 +84,16 @@ def init_db() -> None:
             )
             """
         )
+        # 분석 요청자: 가린 성명과 식별 암호의 해시만 저장한다 (원문 저장 안 함)
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS owners (
+                analysis_id TEXT PRIMARY KEY,
+                masked_name TEXT,
+                secret_hash TEXT
+            )
+            """
+        )
         # 비공개 결과의 공유 링크. 분석 1건당 링크 1개, 공유를 중지하면 행을 지운다
         conn.execute(
             """
@@ -251,19 +261,48 @@ def get_report(analysis_id: str) -> ReportResponse | None:
 def list_analyses(limit: int, client_id: str | None = None) -> list[AnalysisSummary]:
     with _connect() as (conn, p):
         if client_id is None:
-            where, params = "is_public = 1", ()
+            where, params = "a.is_public = 1", ()
         else:
-            where, params = f"client_id = {p}", (client_id,)
-        tiebreak = "seq" if _database_url() else "rowid"
+            where, params = f"a.client_id = {p}", (client_id,)
+        tiebreak = "a.seq" if _database_url() else "a.rowid"
         rows = conn.execute(
-            f"SELECT id, url, verdict, created_at FROM analyses WHERE {where} "
-            f"ORDER BY created_at DESC, {tiebreak} DESC LIMIT {p}",
+            f"SELECT a.id, a.url, a.verdict, a.created_at, o.masked_name FROM analyses a "
+            f"LEFT JOIN owners o ON o.analysis_id = a.id WHERE {where} "
+            f"ORDER BY a.created_at DESC, {tiebreak} DESC LIMIT {p}",
             (*params, limit),
         ).fetchall()
 
     return [
         AnalysisSummary(
-            id=row["id"], url=row["url"], verdict=row["verdict"], created_at=row["created_at"]
+            id=row["id"], url=row["url"], verdict=row["verdict"], created_at=row["created_at"],
+            owner_name=row["masked_name"],
         )
         for row in rows
     ]
+
+
+def save_owner(analysis_id: str, masked_name: str | None, secret_hash: str | None) -> None:
+    with _connect() as (conn, p):
+        conn.execute(
+            f"INSERT INTO owners (analysis_id, masked_name, secret_hash) VALUES ({p}, {p}, {p})",
+            (analysis_id, masked_name, secret_hash),
+        )
+
+
+def get_owner_secret(analysis_id: str) -> str | None:
+    """공개 결과의 식별 암호 해시. 공개가 아니거나 없으면 None (비공개 결과 삭제는 아직 지원하지 않음)."""
+    with _connect() as (conn, p):
+        row = conn.execute(
+            f"SELECT o.secret_hash FROM owners o JOIN analyses a ON a.id = o.analysis_id "
+            f"WHERE o.analysis_id = {p} AND a.is_public = 1",
+            (analysis_id,),
+        ).fetchone()
+    return row["secret_hash"] if row else None
+
+
+def delete_analysis(analysis_id: str) -> None:
+    """분석 결과와 연결된 리포트, 공유 링크, 요청자 정보를 함께 지운다."""
+    with _connect() as (conn, p):
+        for table, column in (("reports", "analysis_id"), ("shares", "analysis_id"),
+                              ("owners", "analysis_id"), ("analyses", "id")):
+            conn.execute(f"DELETE FROM {table} WHERE {column} = {p}", (analysis_id,))

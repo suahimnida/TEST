@@ -1,3 +1,4 @@
+import re
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -5,7 +6,10 @@ from pydantic import BaseModel, Field, field_validator
 
 class AnalysisRequest(BaseModel):
     url: str = Field(..., examples=["https://example.com"])
-    is_public: bool = False  
+    is_public: bool = False
+    # 분석 요청자 확인용. 화면에서는 필수로 받는다 (app/services/owner.py)
+    owner_name: str | None = Field(None, max_length=30)
+    owner_secret: str | None = None
 
     @field_validator("url")
     @classmethod
@@ -14,6 +18,29 @@ class AnalysisRequest(BaseModel):
         if not v:
             raise ValueError("url이 비어 있습니다.")
         return v
+
+    @field_validator("owner_name")
+    @classmethod
+    def name_not_blank(cls, v: str | None) -> str | None:
+        if v is not None and not v.strip():
+            raise ValueError("성명이 비어 있습니다.")
+        return v.strip() if v else v
+
+    @field_validator("owner_secret")
+    @classmethod
+    def secret_format(cls, v: str | None) -> str | None:
+        if v is not None and not re.fullmatch(r"[A-Za-z0-9]{12}", v):
+            raise ValueError("사용자 식별 암호는 영문 대소문자와 숫자 12자리여야 합니다.")
+        return v
+
+
+class OwnerCheckRequest(BaseModel):
+    secret: str
+
+
+class DeleteAnalysisRequest(BaseModel):
+    secret: str
+    confirm_text: str
 
 
 class BlacklistResult(BaseModel):
@@ -76,6 +103,7 @@ class AnalysisResponse(BaseModel):
     #   share_token: 공유 링크 토큰. 본인에게만 보낸다
     viewer: Literal["owner", "public", "shared"] | None = None
     share_token: str | None = None
+    owner_name: str | None = None  # 가린 성명 (예: 김**). 공개 결과에서 보여 준다
     is_public: bool = False
     verdict: Literal["phishing", "suspicious", "normal"] | None = None
     confidence: float | None = None
@@ -99,6 +127,7 @@ class AnalysisSummary(BaseModel):
     url: str
     verdict: Literal["phishing", "suspicious", "normal"] | None = None
     created_at: str
+    owner_name: str | None = None  # 가린 성명 (예: 김**)
 
 
 class AnalysisListResponse(BaseModel):

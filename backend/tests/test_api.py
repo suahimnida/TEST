@@ -175,7 +175,7 @@ def test_list_mine_returns_only_my_records_newest_first():
     assert res.status_code == 200
     items = res.json()["items"]
     assert [item["url"] for item in items] == ["https://c.com", "https://b.com", "https://a.com"]
-    assert set(items[0]) == {"id", "url", "verdict", "created_at"}
+    assert set(items[0]) == {"id", "url", "verdict", "created_at", "owner_name"}
 
 
 def test_list_mine_requires_client_id():
