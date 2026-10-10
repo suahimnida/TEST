@@ -38,6 +38,7 @@ from app.schemas import (
 from app.services import (
     allowlist,
     blacklist,
+    explain,
     reputation,
     detections,
     followup,
@@ -139,6 +140,7 @@ def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = He
         similar_cases=rag_result.similar_cases,
         blacklist=blacklist_result,
         allowlist=allowlist_result,
+        explanation=explain.build(request.url, model_used=model_result.status == "ready"),
         rag=rag_result.reference,
         model=model_result,
     )

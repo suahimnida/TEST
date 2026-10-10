@@ -79,7 +79,9 @@ class AnalysisResponse(BaseModel):
     extracted_features: dict = {}
     similar_cases: list[SimilarCase] = []
     blacklist: BlacklistResult
-    allowlist: AllowlistResult = AllowlistResult() 
+    allowlist: AllowlistResult = AllowlistResult()
+    # 판단 근거 수치: ML 모델 기여도와 정상 데이터 대비 위치 (app/services/explain.py)
+    explanation: dict | None = None 
     rag: RagReference = RagReference() 
     model: ModelResult 
 

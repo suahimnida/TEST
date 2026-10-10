@@ -114,14 +114,38 @@ def build_evidence(analysis: AnalysisResponse) -> list[ReportEvidence]:
         evidence.append(
             ReportEvidence(
                 source="ML 모델",
-                finding=f"URL 구조 특징 21개로 계산한 피싱 위험 점수는 {model.risk_score:g}점이며 '{label}'으로 판정했습니다.",
+                finding=f"URL 문자 패턴(n-gram)으로 계산한 피싱 위험 점수는 {model.risk_score:g}점이며 '{label}'으로 판정했습니다.",
                 used_in_verdict=True,
             )
         )
+        explained = (analysis.explanation or {}).get("model")
+        if explained:
+            risky = sorted([p for p in explained["parts"] if p["contribution"] > 0.3 and p["text"]],
+                           key=lambda p: p["contribution"], reverse=True)[:3]
+            if risky:
+                listed = ", ".join(f"{p['part']} '{p['text']}'(+{p['contribution']:.2f})" for p in risky)
+                evidence.append(
+                    ReportEvidence(
+                        source="ML 모델 · 부분별 기여",
+                        finding=f"모델 점수를 피싱 쪽으로 가장 크게 올린 부분은 {listed}입니다.",
+                        used_in_verdict=True,
+                    )
+                )
     elif not bl.matched:
         evidence.append(
             ReportEvidence(source="ML 모델", finding="ML 모델 결과를 사용할 수 없었습니다.", used_in_verdict=False)
         )
+
+    for ref in (analysis.explanation or {}).get("reference", []):
+        if ref["outside_normal"]:
+            evidence.append(
+                ReportEvidence(
+                    source="정상 데이터 대비",
+                    finding=f"{ref['name']} {ref['value']:g}{ref['unit']}은(는) 정상 URL 상위 95% 값"
+                            f"({ref['normal_p95']:g}{ref['unit']})보다 큽니다 (정상 중앙값 {ref['normal_median']:g}{ref['unit']}).",
+                    used_in_verdict=False,
+                )
+            )
 
     for key, title in DETECTION_KO.items():
         item = getattr(analysis.detections, key, None)
