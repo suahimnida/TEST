@@ -282,3 +282,11 @@
   }
 }
 
+
+/* "학습에서 뺀 것" 카드의 설명 문장 */
+.ml-feature-card p {
+  margin-top: 8px;
+  color: #8b9491;
+  font-size: 12px;
+  line-height: 1.6;
+}

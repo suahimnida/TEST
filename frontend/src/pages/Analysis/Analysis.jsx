@@ -2,30 +2,27 @@ import { useEffect, useState } from "react";
 import { analyzeUrl } from "../../services/api";
 import "./Analysis.css";
 
+// 실제 백엔드 처리 순서. 사이트에는 접속하지 않으므로 HTML·이미지 분석 단계는 없다
 const analysisSteps = [
   {
+    title: "KISA 블랙리스트",
+    description: "한국인터넷진흥원 피싱 사이트 목록과 비교",
+  },
+  {
     title: "URL 구조",
-    description: "URL 길이 및 문자 패턴 분석",
+    description: "URL 문자열의 구조, 키워드, 경로 패턴 분석",
   },
   {
-    title: "URL 통계",
-    description: "엔트로피 및 n-gram 패턴 분석",
+    title: "ML 판정",
+    description: "URL 문자 패턴으로 학습한 모델로 위험도 계산",
   },
   {
-    title: "도메인 분석",
-    description: "도메인, 인증서 및 리디렉션 분석",
+    title: "평판 신호",
+    description: "도메인 등록일, 인증서 기록, 호스팅 정보 조회 (사이트에는 접속하지 않음)",
   },
   {
-    title: "HTML 분석",
-    description: "DOM 구조 및 의심스러운 요소 분석",
-  },
-  {
-    title: "페이지 콘텐츠",
-    description: "텍스트 및 이미지 콘텐츠 분석",
-  },
-  {
-    title: "AI Agent",
-    description: "분석 결과를 종합하고 위험도를 판단",
+    title: "유사 사례·AI 설명",
+    description: "비슷한 과거 사례를 찾고 AI가 판단 근거를 설명",
   },
 ];
 
@@ -90,7 +87,7 @@ function Analysis({ url, isPublic, onComplete }) {
       <div className="analysis-header">
         <p className="eyebrow">URL 보안 분석</p>
 
-        <h2>웹사이트 분석 중</h2>
+        <h2>URL 분석 중</h2>
 
         <p className="analysis-description">
           여러 보안 지표를 분석하여 해당 웹사이트의

@@ -146,22 +146,22 @@ function Home({ onAnalyze, onOpenHistory }) {
         <div className="feature-card">
           <span className="feature-number">02</span>
 
-          <h3>AI 탐지</h3>
+          <h3>AI 설명</h3>
 
           <p>
-            AI Agent가 여러 분석 결과를 종합하여
-            의심스러운 특성을 판단합니다.
+            AI가 탐지 근거와 유사 사례를 바탕으로
+            왜 위험한지 설명하고 리포트를 작성합니다.
           </p>
         </div>
 
         <div className="feature-card">
           <span className="feature-number">03</span>
 
-          <h3>웹페이지 분석</h3>
+          <h3>평판 신호</h3>
 
           <p>
-            HTML, 텍스트 및 이미지 요소를 분석하여
-            추가적인 위험 신호를 확인합니다.
+            사이트에 접속하지 않고 도메인 등록일, 인증서 기록,
+            호스팅 정보를 확인합니다.
           </p>
         </div>
       </div>

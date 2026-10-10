@@ -12,15 +12,7 @@ const detectionLabels = {
   },
   domain: {
     title: "도메인 분석",
-    description: "도메인, 인증서 및 리디렉션 분석",
-  },
-  html: {
-    title: "HTML 분석",
-    description: "HTML 구조 및 의심스러운 요소 분석",
-  },
-  image: {
-    title: "페이지 콘텐츠",
-    description: "텍스트 및 이미지 콘텐츠 분석",
+    description: "최상위 도메인, 브랜드 사칭, 서브도메인 구조 분석",
   },
   reputation: {
     title: "평판 신호",
@@ -77,9 +69,10 @@ function Result({ url, result }) {
 
   const data = result;
 
+  // 예전 분석 기록에 남아 있는 "HTML 분석", "페이지 콘텐츠" 항목은 실제로 분석하지 않은 것이라 보여 주지 않는다
   const detectionEntries = Object.entries(
     data.detections || {}
-  ).filter(([, value]) => value !== null);
+  ).filter(([key, value]) => value !== null && key in detectionLabels);
 
   const similarCases = Array.isArray(data.similar_cases)
     ? data.similar_cases
@@ -121,7 +114,17 @@ function Result({ url, result }) {
         <h2>분석 결과</h2>
 
         <p className="result-description">
-          입력한 웹사이트의 보안 분석 결과입니다.
+          입력한 URL의 보안 분석 결과입니다.
+        </p>
+      </div>
+
+      {/* 분석 범위: 사이트에 접속하지 않았다는 점을 결과보다 먼저 밝힌다 */}
+      <div className="analysis-scope">
+        <strong>분석 범위</strong>
+        <p>
+          URL 문자열과 공개된 등록 정보(KISA 블랙리스트, 도메인 등록일,
+          인증서 기록, 호스팅 정보)만 확인했습니다. 이 사이트에는 접속하지
+          않았으며 페이지 내용(HTML, 텍스트, 이미지)은 확인하지 않았습니다.
         </p>
       </div>
 

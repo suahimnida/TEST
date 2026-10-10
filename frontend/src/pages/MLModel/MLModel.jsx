@@ -1,12 +1,25 @@
 import "./MLModel.css";
 
+// 서비스 모델 v2 (backend/ml_integration/models/url_model_v2_report.json)
 const features = [
-  "URL 길이",
-  "문자 및 특수문자 패턴",
-  "문자열 엔트로피",
-  "n-gram",
-  "의심 키워드",
-  "도메인 특징",
+  "문자 n-gram (3~5글자)",
+  "URL 원문 그대로 (대소문자·특수문자 유지)",
+  "로지스틱 회귀 분류",
+  "검증 세트로 정한 판정 기준점",
+];
+
+// 학습에서 일부러 뺀 것과 이유
+const excluded = [
+  {
+    title: "HTML·페이지 내용 특징",
+    reason:
+      "학습 데이터(PhiUSIIL)에는 HTML 기반 열이 있지만, 이 서비스는 사이트에 접속하지 않아 실제 분석 때 만들 수 없으므로 학습에서도 뺐습니다.",
+  },
+  {
+    title: "https·www 유무",
+    reason:
+      "기존 학습 데이터의 정상 URL이 모두 https://www. 형태라, 넣으면 모델이 형태만 보고 판단하는 지름길을 배웁니다.",
+  },
 ];
 
 function MLModel() {
@@ -18,8 +31,8 @@ function MLModel() {
         <h2>ML 모델</h2>
 
         <p className="ml-model-description">
-          URL에서 추출한 다양한 특징을 기반으로
-          피싱 사이트의 가능성을 분류하는 머신러닝 모델입니다.
+          URL 문자열만 보고 피싱 가능성을 계산하는 머신러닝 모델입니다.
+          사이트에 접속하지 않으므로 페이지 내용은 사용하지 않습니다.
         </p>
       </div>
 
@@ -31,9 +44,11 @@ function MLModel() {
             <h3>URL 기반 피싱 탐지</h3>
 
             <p>
-              입력된 URL에서 길이, 문자 패턴, 엔트로피,
-              n-gram 등의 특징을 추출하고 머신러닝 모델을
-              통해 정상 사이트와 피싱 사이트를 분류합니다.
+              입력된 URL 원문에서 3~5글자 문자 조합(n-gram)을
+              뽑아 정상·피싱 URL로 학습한 모델이 위험도를
+              계산합니다. 학습에 없던 데이터로 평가했을 때
+              정상 URL을 피싱으로 잘못 판정하는 비율은 34.2%,
+              피싱을 놓치는 비율은 13.3%입니다.
             </p>
           </div>
         </div>
@@ -64,6 +79,24 @@ function MLModel() {
       <div className="ml-section">
         <div className="ml-section-header">
           <div>
+            <p className="ml-model-eyebrow">NOT USED</p>
+            <h3>학습에서 뺀 것</h3>
+          </div>
+        </div>
+
+        <div className="ml-feature-grid">
+          {excluded.map((item) => (
+            <div className="ml-feature-card" key={item.title}>
+              <strong>{item.title}</strong>
+              <p>{item.reason}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="ml-section">
+        <div className="ml-section-header">
+          <div>
             <p className="ml-model-eyebrow">ANALYSIS FLOW</p>
             <h3>분석 과정</h3>
           </div>
@@ -80,8 +113,8 @@ function MLModel() {
 
           <div className="ml-flow-item">
             <span>02</span>
-            <strong>특징 추출</strong>
-            <p>URL의 주요 특징 분석</p>
+            <strong>문자 조합 추출</strong>
+            <p>URL 원문의 3~5글자 n-gram</p>
           </div>
 
           <div className="ml-flow-arrow">→</div>
@@ -96,8 +129,8 @@ function MLModel() {
 
           <div className="ml-flow-item">
             <span>04</span>
-            <strong>AI Agent</strong>
-            <p>분석 결과 종합</p>
+            <strong>기준점 보정</strong>
+            <p>의심 30점 · 피싱 60점</p>
           </div>
         </div>
       </div>
@@ -105,14 +138,14 @@ function MLModel() {
       <div className="ml-info-grid">
         <div className="ml-info-card">
           <span>DATASET</span>
-          <strong>PHIUSIIL</strong>
-          <p>정상 및 피싱 URL 데이터</p>
+          <strong>PhiUSIIL + 공개 URL + KISA</strong>
+          <p>형태 편향을 고친 정상·피싱 URL 약 19만 건</p>
         </div>
 
         <div className="ml-info-card">
           <span>INPUT</span>
-          <strong>URL Features</strong>
-          <p>URL에서 추출한 특징 데이터</p>
+          <strong>URL 원문</strong>
+          <p>페이지 내용은 사용하지 않음</p>
         </div>
 
         <div className="ml-info-card">

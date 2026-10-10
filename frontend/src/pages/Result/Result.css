@@ -10,6 +10,27 @@
   padding: 45px 0 28px;
 }
 
+.analysis-scope {
+  margin-bottom: 18px;
+  padding: 14px 18px;
+  border: 1px solid #292e2f;
+  border-left: 3px solid #e0b341;
+  border-radius: 8px;
+  background: rgba(224, 179, 65, 0.06);
+}
+
+.analysis-scope strong {
+  color: #e0b341;
+  font-size: 12px;
+}
+
+.analysis-scope p {
+  margin-top: 6px;
+  color: #c9d1ce;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 .result-header h2 {
   margin-top: 8px;
   font-size: clamp(36px, 4vw, 52px);
