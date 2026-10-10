@@ -193,14 +193,17 @@ def render_report_pdf(report: ReportResponse) -> bytes:
     else:
         story.append(_p("유사 사례를 찾지 못했습니다.", s["body"]))
 
-    story.append(
-        KeepTogether(
-            [
-                _p("4. AI 분석 설명", s["h2"]),
-                _p(report.ai_analysis or "AI 분석 설명이 제공되지 않았습니다.", s["body"]),
-            ]
-        )
-    )
+    block = [
+        _p("4. AI 분석 설명", s["h2"]),
+        _p(report.ai_analysis or "AI 분석 설명이 제공되지 않았습니다.", s["body"]),
+    ]
+    if report.ai_evidence or report.ai_guides:
+        block.append(_p("설명의 출처 번호: [E]는 이 분석의 근거, [G]는 공식 기관 대응 가이드입니다.", s["small"]))
+        for e in report.ai_evidence:
+            block.append(Paragraph(escape(f"[{e['id']}] {e['source']}: {e['text']}"), s["step"], bulletText="·"))
+        for g in report.ai_guides:
+            block.append(Paragraph(escape(f"[{g['id']}] {g['title']} - {g['source']} ({g['url']})"), s["step"], bulletText="·"))
+    story.append(KeepTogether(block))
 
     story.append(KeepTogether([_p("5. 위험 분석", s["h2"]), _p(report.risk_assessment, s["body"])]))
 
@@ -218,6 +221,8 @@ def render_report_pdf(report: ReportResponse) -> bytes:
             block.append(_p(f"{mark}{action.title}", s["cell_bold"]))
             if action.note:
                 block.append(_p(f"→ {action.note}", s["note"]))
+            if action.source:
+                block.append(_p(f"출처: {action.source}", s["note"]))
             for step in action.steps:
                 block.append(Paragraph(escape(step), s["step"], bulletText="·"))
             block.append(Spacer(1, 4))

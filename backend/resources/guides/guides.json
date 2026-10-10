@@ -1,0 +1,96 @@
+{
+  "checked": "2026-10",
+  "note": "공식 기관 안내를 서비스 작성자가 요약한 것이다. 원문과 최신 내용은 각 출처 링크에서 확인한다.",
+  "guides": [
+    {
+      "key": "report_site",
+      "title": "피싱 사이트·스미싱 신고와 상담",
+      "source": "한국인터넷진흥원(KISA) 보호나라·118",
+      "url": "https://www.boho.or.kr",
+      "tags": ["phishing_site", "brand_impersonation", "compromised_site", "smishing"],
+      "text": "피싱이 의심되는 사이트나 문자를 받으면 링크를 누르지 말고 한국인터넷진흥원 보호나라 누리집 또는 118 상담센터에 주소와 받은 메시지를 신고한다. 신고된 사이트는 차단 조치에 활용되고, 피해 대응 방법도 상담받을 수 있다.",
+      "actions": ["report_site"]
+    },
+    {
+      "key": "smishing_check",
+      "title": "문자로 받은 링크의 악성 여부 확인",
+      "source": "한국인터넷진흥원(KISA) 보호나라 카카오톡 채널",
+      "url": "https://www.boho.or.kr",
+      "tags": ["smishing", "shortener"],
+      "text": "문자나 메신저로 받은 링크가 의심되면 직접 열지 말고 보호나라 카카오톡 채널의 스미싱 확인 서비스에 문자 내용을 보내 악성 여부를 먼저 확인한다. 짧게 줄인 주소는 실제 목적지가 가려져 있어 특히 주의한다.",
+      "actions": ["report_site"]
+    },
+    {
+      "key": "official_path",
+      "title": "링크 대신 공식 경로로 확인하기",
+      "source": "한국인터넷진흥원(KISA) 보호나라",
+      "url": "https://www.boho.or.kr",
+      "tags": ["phishing_site", "brand_impersonation", "login_page", "shortener", "prevention"],
+      "text": "계정 정지, 결제 확인, 택배 조회처럼 서두르게 만드는 안내는 받은 링크로 들어가지 말고 해당 기관의 공식 앱이나 직접 입력한 공식 주소, 공식 고객센터 번호로 사실인지 확인한다. 주소창의 도메인이 공식 도메인과 조금이라도 다르면 접속하지 않는다.",
+      "actions": ["do_not_visit", "verify_official"]
+    },
+    {
+      "key": "account_protect",
+      "title": "아이디·비밀번호를 입력했을 때",
+      "source": "한국인터넷진흥원(KISA) 보호나라",
+      "url": "https://www.boho.or.kr",
+      "tags": ["login_page", "account"],
+      "text": "가짜 로그인 화면에 계정 정보를 입력했다면 다른 안전한 기기에서 즉시 비밀번호를 바꾸고, 같은 비밀번호를 쓰는 다른 서비스도 함께 바꾼다. 2단계 인증을 켜고 최근 로그인 기록에서 모르는 접속이 있는지 확인한다.",
+      "actions": ["change_password"]
+    },
+    {
+      "key": "exposure_register",
+      "title": "개인정보 노출 사실 등록",
+      "source": "금융감독원 개인정보노출자 사고예방시스템",
+      "url": "https://pd.fss.or.kr",
+      "tags": ["personal_info", "financial"],
+      "text": "주민등록번호, 신분증, 계좌번호 같은 개인정보를 입력했다면 금융감독원 개인정보노출자 사고예방시스템에 노출 사실을 등록한다. 등록하면 본인 명의의 신규 계좌 개설, 대출, 카드 발급 등이 제한되어 명의도용 피해를 줄일 수 있다.",
+      "actions": ["register_exposure"]
+    },
+    {
+      "key": "identity_theft",
+      "title": "내 명의 휴대전화 개통 확인과 가입 제한",
+      "source": "한국정보통신진흥협회 명의도용방지서비스(엠세이퍼)",
+      "url": "https://www.msafer.or.kr",
+      "tags": ["personal_info"],
+      "text": "개인정보가 노출됐다면 명의도용방지서비스에서 본인 명의로 개통된 휴대전화 현황을 확인하고, 가입제한 서비스로 신규 개통을 막아 둔다. 모르는 회선이 있으면 즉시 해당 통신사에 명의도용을 신고한다.",
+      "actions": ["check_identity_theft"]
+    },
+    {
+      "key": "account_info",
+      "title": "내 계좌 확인과 일괄 지급정지",
+      "source": "금융결제원 계좌정보통합관리서비스",
+      "url": "https://www.payinfo.or.kr",
+      "tags": ["financial", "personal_info", "money_sent"],
+      "text": "계좌정보통합관리서비스에서 본인 명의의 계좌와 대출을 한 번에 조회해 모르는 계좌가 있는지 확인한다. 금융정보가 노출됐다면 본인계좌 일괄지급정지 기능으로 내 계좌 전체의 출금을 한 번에 막을 수 있다.",
+      "actions": ["check_identity_theft", "stop_payment"]
+    },
+    {
+      "key": "stop_payment",
+      "title": "돈을 보냈을 때 즉시 지급정지",
+      "source": "금융감독원 1332 · 경찰청 112",
+      "url": "https://www.fss.or.kr",
+      "tags": ["money_sent", "financial"],
+      "text": "피싱 사이트에서 돈을 보냈다면 돈을 보낸 금융회사와 받은 계좌의 금융회사 고객센터에 즉시 지급정지를 요청한다. 경찰청 112나 금융감독원 1332로도 연결할 수 있고, 카드 정보를 입력했다면 카드사에 사용 정지와 재발급을 요청한다.",
+      "actions": ["stop_payment"]
+    },
+    {
+      "key": "police_report",
+      "title": "경찰 신고와 피해구제 신청",
+      "source": "경찰청 사이버범죄 신고시스템(ECRM)",
+      "url": "https://ecrm.police.go.kr",
+      "tags": ["money_sent"],
+      "text": "금전 피해가 생겼다면 경찰청 사이버범죄 신고시스템이나 112로 신고하고 관할 경찰서에서 사건사고사실확인원을 발급받는다. 지급정지를 신청한 금융회사에 이 서류를 내고 피해구제를 신청하며, 서면 접수 기한이 짧으므로 금융회사에 기한과 필요한 서류를 바로 확인한다.",
+      "actions": ["police_report"]
+    },
+    {
+      "key": "malware_app",
+      "title": "앱이나 파일을 설치·실행했을 때",
+      "source": "한국인터넷진흥원(KISA) 보호나라",
+      "url": "https://www.boho.or.kr",
+      "tags": ["app_install", "file_download"],
+      "text": "피싱 링크에서 앱이나 파일을 설치했다면 휴대전화를 비행기 모드로 바꾸고 최근 설치한 모르는 앱과 원격제어 앱을 삭제한 뒤 백신으로 전체 검사를 한다. 통신사의 소액결제 차단과 번호도용 문자 차단 서비스를 신청해 2차 피해를 막는다.",
+      "actions": ["remove_app", "scan_device"]
+    }
+  ]
+}

@@ -54,8 +54,13 @@ class Detections(BaseModel):
 
 
 class AiAnalysis(BaseModel):
+    """출처가 있는 설명. 문장 끝의 [E1]은 evidence, [G1]은 guides의 항목을 가리킨다."""
+
     summary: str | None = None
     reasons: list[str] = []
+    written_by: str | None = None  # 설명을 쓴 모델 이름, 또는 "template"
+    evidence: list[dict] = []  # ML·탐지 근거 (app/services/guides.py build_evidence)
+    guides: list[dict] = []  # RAG로 찾은 공식 기관 대응 가이드
 
 
 class AllowlistResult(BaseModel):
@@ -123,8 +128,10 @@ class ReportAction(BaseModel):
     id: str
     title: str
     steps: list[str]
-    priority: bool = False 
-    note: str | None = None 
+    priority: bool = False
+    note: str | None = None
+    source: str | None = None  # 이 조치를 안내하는 공식 기관 (resources/guides/guides.json)
+    source_url: str | None = None
 
 
 class ReportActionGroup(BaseModel):
@@ -155,7 +162,9 @@ class ReportResponse(BaseModel):
     risk_assessment: str
     evidence: list[ReportEvidence]
     similar_cases: list[SimilarCase] = []
-    ai_analysis: str | None = None  
+    ai_analysis: str | None = None  # 출처 번호([E1], [G1])가 붙은 설명
+    ai_evidence: list[dict] = []  # [E] 번호가 가리키는 근거
+    ai_guides: list[dict] = []  # [G] 번호가 가리키는 공식 기관 대응 가이드
     followup_summary: str  
     action_groups: list[ReportActionGroup]
     contacts: list[ReportContact]

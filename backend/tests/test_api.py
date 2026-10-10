@@ -30,11 +30,13 @@ def test_create_analysis_returns_stub(monkeypatch):
     assert body["detections"]["reputation"] is None  # 테스트에서는 외부 조회를 끈다
     assert body["detections"]["url"]["status"] == "normal"
     assert body["detections"]["html"] is None and body["detections"]["image"] is None
-    assert body["ai_analysis"] == {"summary": None, "reasons": []}
+    # 판정이 없어도 예방 가이드를 찾아 템플릿 설명을 만든다
+    assert body["ai_analysis"]["written_by"] == "template"
+    assert body["ai_analysis"]["guides"][0]["key"] == "official_path"
     assert body["extracted_features"] == {}
     assert body["similar_cases"] == []
     assert body["blacklist"] == {"matched": False, "match_type": "none", "source": "KISA 2024"}
-    assert body["rag"] == {"matched": False, "source": [], "evidence": None}
+    assert body["rag"]["matched"] is True
     assert body["model"] == {"status": "not_ready", "risk_score": None, "label": None}
 
 
@@ -58,7 +60,8 @@ def test_blacklist_match_skips_rag_and_model(monkeypatch):
         "check_blacklist",
         lambda url: BlacklistResult(matched=True, match_type="host", source="KISA 2024"),
     )
-    monkeypatch.setattr(rag, "explain", must_not_run)
+    monkeypatch.setattr(rag, "similar", must_not_run)
+    monkeypatch.setattr(rag, "compose", lambda *a: (_ for _ in ()).throw(AssertionError("LLM 호출 금지")))
     monkeypatch.setattr(model, "predict", must_not_run)
 
     body = client.post("/api/v1/analyses", json={"url": "http://evil.tk/x"}).json()
@@ -66,24 +69,36 @@ def test_blacklist_match_skips_rag_and_model(monkeypatch):
     assert body["risk_score"] == 100.0
     assert body["risk_level"] == "danger"
     assert body["model"]["status"] == "not_ready"
+    # 블랙리스트 근거와 신고 가이드로 템플릿 설명을 만든다
+    assert body["ai_analysis"]["written_by"] == "template"
+    assert body["ai_analysis"]["evidence"][0]["source"] == "KISA 블랙리스트"
 
 
-def test_create_analysis_fills_rag_fields(monkeypatch):
+def test_ml_rag_llm_roles(monkeypatch):
+    """ML 근거 → RAG 가이드 → LLM 설명 순서로 채워지고, 설명은 근거·가이드 번호만 쓴다."""
     fake = rag.RagResult(
-        verdict="phishing",
-        confidence=0.9,
-        summary="근거 요약",
         features={"url_length": 20},
         similar_cases=[{"url": "http://evil.tk", "label": 1, "similarity": 0.91}],
-        reference={"matched": True, "source": ["KISA 가이드"], "evidence": "문서 근거"},
     )
-    monkeypatch.setattr(rag, "explain", lambda url: fake)
+    monkeypatch.setattr(rag, "similar", lambda url: fake)
+    seen = {}
 
-    body = client.post("/api/v1/analyses", json={"url": "http://evil.tk/x"}).json()
-    assert body["ai_analysis"] == {"summary": "근거 요약", "reasons": []}
-    assert body["extracted_features"] == {"url_length": 20}
+    def fake_compose(evidence, guides):
+        seen.update(evidence=evidence, guides=guides)
+        return "로그인 화면을 흉내 낸 주소입니다 [E1]. 공식 경로로 확인하세요 [G1]."
+
+    monkeypatch.setattr(rag, "compose", fake_compose)
+    monkeypatch.setattr(model, "predict", lambda url: ModelResult(status="ready", risk_score=95.0, label="phishing"))
+
+    body = client.post("/api/v1/analyses", json={"url": "http://secure-login-verify.tk/account"}).json()
+    ai = body["ai_analysis"]
+    assert ai["written_by"] == rag.CLAUDE_MODEL and ai["summary"].endswith("[G1].")
+    assert ai["evidence"][0]["source"] == "ML 모델" and ai["evidence"][0]["id"] == "E1"
+    assert {g["key"] for g in ai["guides"]} & {"official_path", "report_site", "account_protect"}
+    assert all(g["url"].startswith("https://") for g in ai["guides"])
+    assert seen["evidence"] == ai["evidence"] and seen["guides"] == ai["guides"]
     assert body["similar_cases"] == [{"url": "http://evil.tk", "label": 1, "similarity": 0.91}]
-    assert body["rag"] == {"matched": True, "source": ["KISA 가이드"], "evidence": "문서 근거"}
+    assert body["rag"]["matched"] and body["rag"]["source"]
 
 
 def test_create_analysis_rejects_blank_url():

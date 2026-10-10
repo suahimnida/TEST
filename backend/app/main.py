@@ -33,12 +33,14 @@ from app.schemas import (
     Detections,
     HealthResponse,
     ModelResult,
+    RagReference,
     ReportResponse,
 )
 from app.services import (
     allowlist,
     blacklist,
     explain,
+    guides,
     reputation,
     detections,
     followup,
@@ -113,7 +115,7 @@ def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = He
         rag_result = rag.RagResult()
         model_result = ModelResult(status="not_ready")
     else:
-        rag_result = rag.explain(request.url)
+        rag_result = rag.similar(request.url)
         model_result = model.predict(request.url)
 
     # URL 문자열 기반 탐지 결과. 실패해도 나머지 분석 결과는 그대로 반환한다
@@ -128,20 +130,42 @@ def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = He
         except Exception:
             logger.exception("평판 신호 조회 실패: %s", request.url)
 
+    decided = verdict.decide(blacklist_result, model_result, allowlist_result)
+    explanation = explain.build(request.url, model_used=model_result.status == "ready")
+
+    # ① ML 근거 → ② RAG 대응 가이드 검색 → ③ LLM이 둘을 합쳐 출처가 있는 설명 작성
+    evidence = guides.build_evidence(
+        verdict=decided["verdict"], risk_score=decided["risk_score"], blacklist=blacklist_result,
+        allowlist=allowlist_result, model=model_result, explanation=explanation,
+        detections=detection_result, similar_cases=rag_result.similar_cases,
+    )
+    found = guides.retrieve(guides.evidence_tags(request.url, decided["verdict"], evidence), evidence)
+    # 블랙리스트로 확정된 URL은 LLM을 부르지 않는다 (팀 합의: 블랙리스트면 RAG·ML 생략)
+    written = None if blacklist_result.matched else rag.compose(evidence, found)
+    ai_analysis = AiAnalysis(
+        summary=written or guides.template_explanation(decided["verdict"], evidence, found),
+        written_by=rag.CLAUDE_MODEL if written else "template",
+        evidence=evidence,
+        guides=found,
+    )
+
     result = AnalysisResponse(
         id=str(uuid.uuid4()),
         status="completed",
         url=request.url,
         is_public=request.is_public,
-        **verdict.decide(blacklist_result, model_result, allowlist_result),
+        **decided,
         detections=detection_result,
-        ai_analysis=AiAnalysis(summary=rag_result.summary),
+        ai_analysis=ai_analysis,
         extracted_features=rag_result.features,
         similar_cases=rag_result.similar_cases,
         blacklist=blacklist_result,
         allowlist=allowlist_result,
-        explanation=explain.build(request.url, model_used=model_result.status == "ready"),
-        rag=rag_result.reference,
+        explanation=explanation,
+        rag=RagReference(
+            matched=bool(found),
+            source=[f"{g['title']} ({g['source']})" for g in found],
+        ),
         model=model_result,
     )
     # 저장에 실패해도(예: DB 일시 장애) 분석 결과는 사용자에게 돌려준다

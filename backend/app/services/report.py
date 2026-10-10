@@ -13,6 +13,7 @@ from app.schemas import (
     ReportEvidence,
     ReportResponse,
 )
+from app.services.guides import guide_for_action
 from app.services.followup import (
     ACTIONS,
     DETECTION_KO,
@@ -244,17 +245,20 @@ def _assemble(analysis, evidence, text: dict, followup: FollowupResult, generate
     for sid, label in SITUATIONS:
         if sid not in situations:
             continue
-        actions = [
-            ReportAction(
+        actions = []
+        for aid, a in ACTIONS.items():
+            if a["situation"] != sid:
+                continue
+            guide = guide_for_action(aid)  # 조치마다 안내한 공식 기관을 출처로 붙인다
+            actions.append(ReportAction(
                 id=aid,
                 title=a["title"],
                 steps=a["steps"],
                 priority=aid in priority,
                 note=followup.action_notes.get(aid),
-            )
-            for aid, a in ACTIONS.items()
-            if a["situation"] == sid
-        ]
+                source=guide["source"] if guide else None,
+                source_url=guide["url"] if guide else None,
+            ))
         groups.append(ReportActionGroup(situation=label, actions=actions))
 
     return ReportResponse(
@@ -273,6 +277,8 @@ def _assemble(analysis, evidence, text: dict, followup: FollowupResult, generate
         evidence=evidence,
         similar_cases=analysis.similar_cases,
         ai_analysis=analysis.ai_analysis.summary,
+        ai_evidence=analysis.ai_analysis.evidence,
+        ai_guides=analysis.ai_analysis.guides,
         followup_summary=followup.research_summary,
         action_groups=groups,
         contacts=CONTACTS,

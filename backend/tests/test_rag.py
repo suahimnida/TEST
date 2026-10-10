@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 import pytest
 
 from app.services import rag
@@ -8,55 +9,67 @@ FAKE_CASES = [
 ]
 
 
+# ---- Claude: 근거[E]와 가이드[G]로 출처 있는 설명 쓰기 (판정하지 않는다) ----
+
+EVIDENCE = [
+    {"id": "E1", "source": "ML 모델", "text": "위험 점수는 99점입니다.", "used_in_verdict": True},
+    {"id": "E2", "source": "탐지 결과 · URL 구조", "text": "도메인에 로그인 단어가 있습니다.", "used_in_verdict": False},
+]
+GUIDES = [{"id": "G1", "title": "링크 대신 공식 경로로 확인하기", "text": "공식 앱으로 확인한다.", "source": "KISA"}]
+
+
+class FakeClaude:
+    def __init__(self, text):
+        self.text = text
+        self.prompts = []
+        self.messages = SimpleNamespace(create=self._create)
+
+    def _create(self, **kwargs):
+        self.prompts.append(kwargs)
+        return SimpleNamespace(content=[SimpleNamespace(type="text", text=self.text)], stop_reason="end_turn")
+
+
 @pytest.fixture
-def fake_rag(monkeypatch):
-    monkeypatch.setattr(
-        rag, "_state", {"search_features": lambda url: {"url": url}, "client": object()}
-    )
-    monkeypatch.setattr(rag, "_row_to_description", lambda feats: f"URL: {feats['url']}")
-    monkeypatch.setattr(rag, "_retrieve", lambda features: FAKE_CASES)
-    monkeypatch.setattr(
-        rag,
-        "_ask_claude",
-        lambda description, cases: {"verdict": "phishing", "confidence": 0.9, "reason": "근거 요약"},
-    )
+def with_claude(monkeypatch):
+    def use(text):
+        fake = FakeClaude(text)
+        monkeypatch.setattr(rag, "_state", {"client": fake})
+        return fake
+    return use
 
 
-def test_explain_without_rag_returns_empty():
-    assert rag._state is None
-    result = rag.explain("https://example.com")
-    assert result == rag.RagResult()
+def test_compose_returns_cited_explanation(with_claude):
+    fake = with_claude("도메인에 로그인 단어가 있어 위험합니다 [E2]. 위험 점수도 높습니다 [E1]. 공식 앱으로 확인하세요 [G1].")
+    text = rag.compose(EVIDENCE, GUIDES)
+    assert text.endswith("[G1].")
+    prompt = fake.prompts[0]
+    assert "판정하지 않습니다" in prompt["system"]
+    assert "[E2] (탐지 결과 · URL 구조)" in prompt["messages"][0]["content"] and "[G1]" in prompt["messages"][0]["content"]
 
 
-def test_explain_maps_rag_output(fake_rag):
-    result = rag.explain("http://evil.tk/login")
-    assert result.verdict == "phishing"
-    assert result.confidence == pytest.approx(0.9)
-    assert result.summary == "근거 요약"
-    assert result.features == {"url": "http://evil.tk/login"}
-    assert [c.url for c in result.similar_cases] == ["http://evil.tk/login", "https://naver.com"]
-    assert result.similar_cases[0].label == 1
-    assert result.similar_cases[0].similarity == pytest.approx(0.91)
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "출처 없이 위험하다고만 씁니다.",
+        "위험합니다 [E9].",  # 없는 근거 번호
+        "위험합니다 [E1]. 출처 없는 문장입니다.",
+        "118로 전화하세요 [G1].",  # 전화번호는 서버가 보여 준다
+        "https://evil.example 로 가지 마세요 [E1].",
+    ],
+)
+def test_compose_rejects_unsourced_text(with_claude, bad):
+    with_claude(bad)
+    assert rag.compose(EVIDENCE, GUIDES) is None  # 호출한 쪽에서 템플릿으로 대신한다
 
 
-def test_explain_keeps_search_results_when_claude_fails(fake_rag, monkeypatch):
-    def fail(description, cases):
-        raise RuntimeError("API 오류")
-
-    monkeypatch.setattr(rag, "_ask_claude", fail)
-    result = rag.explain("http://evil.tk/login")
-    assert result.verdict is None
-    assert result.summary is None
-    assert result.features == {"url": "http://evil.tk/login"}
-    assert len(result.similar_cases) == 2
+def test_compose_without_claude_returns_none(monkeypatch):
+    monkeypatch.setattr(rag, "_state", None)
+    assert rag.compose(EVIDENCE, GUIDES) is None
 
 
-def test_explain_returns_empty_when_search_fails(fake_rag, monkeypatch):
-    def fail(features):
-        raise RuntimeError("검색 오류")
-
-    monkeypatch.setattr(rag, "_retrieve", fail)
-    assert rag.explain("http://evil.tk/login") == rag.RagResult()
+def test_similar_without_rag_returns_empty(monkeypatch):
+    monkeypatch.setattr(rag, "_state", None)
+    assert rag.similar("https://example.com") == rag.RagResult()
 
 
 def test_load_rag_without_metadata(tmp_path, monkeypatch):
@@ -64,41 +77,6 @@ def test_load_rag_without_metadata(tmp_path, monkeypatch):
     assert rag.load_rag() is False
     assert rag._state is None
 
-
-def test_parse_verdict_plain_json():
-    text = '{"verdict": "phishing", "confidence": 0.87, "reason": "의심 키워드가 많습니다."}'
-    assert rag._parse_verdict(text) == {
-        "verdict": "phishing",
-        "confidence": pytest.approx(0.87),
-        "reason": "의심 키워드가 많습니다.",
-    }
-
-
-def test_parse_verdict_with_code_fence_and_percent():
-    text = '```json\n{"verdict": "Normal", "confidence": 92, "reason": "정상 사례와 유사합니다."}\n```'
-    result = rag._parse_verdict(text)
-    assert result["verdict"] == "normal"
-    assert result["confidence"] == pytest.approx(0.92)
-
-
-@pytest.mark.parametrize(
-    "text",
-    [
-        "판정할 수 없습니다.",
-        '{"verdict": "unknown", "confidence": 0.5, "reason": "x"}',
-        '{"verdict": "phishing", "confidence": 0.5, "reason": ""}',
-    ],
-)
-def test_parse_verdict_rejects_bad_output(text):
-    with pytest.raises(ValueError):
-        rag._parse_verdict(text)
-
-
-def test_explain_without_claude_returns_cases_only(fake_rag, monkeypatch):
-    monkeypatch.setitem(rag._state, "client", None)
-    result = rag.explain("http://evil.tk/login")
-    assert result.summary is None and result.verdict is None
-    assert len(result.similar_cases) == 2
 
 
 @pytest.fixture
@@ -111,7 +89,7 @@ def real_rag(monkeypatch):
 
 
 def labels_of(url):
-    return [c.label for c in rag.explain(url).similar_cases]
+    return [c.label for c in rag.similar(url).similar_cases]
 
 
 def test_phishing_url_finds_phishing_cases(real_rag):
@@ -124,11 +102,11 @@ def test_official_brand_homepage_finds_normal_cases(real_rag):
 
 
 def test_similarity_is_sorted_and_in_range(real_rag):
-    cases = rag.explain("http://secure-paypal-login.verify-account.tk").similar_cases
+    cases = rag.similar("http://secure-paypal-login.verify-account.tk").similar_cases
     sims = [c.similarity for c in cases]
     assert sims == sorted(sims, reverse=True)
     assert all(0 < s <= 1 for s in sims)
-    homepage = rag.explain("https://www.naver.com").similar_cases[0].similarity
+    homepage = rag.similar("https://www.naver.com").similar_cases[0].similarity
     assert homepage > sims[0]
 
 
