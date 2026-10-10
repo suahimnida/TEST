@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { analyzeUrl } from "../../services/api";
 import "./Analysis.css";
 
-// 실제 백엔드 처리 순서. 사이트에는 접속하지 않으므로 HTML·이미지 분석 단계는 없다
+// 실제 백엔드 처리 순서
 const analysisSteps = [
   {
     title: "KISA 블랙리스트",

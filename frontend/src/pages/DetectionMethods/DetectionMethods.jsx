@@ -51,9 +51,7 @@ function DetectionMethods() {
 
         <p className="detection-description">
           피싱 사이트 분석에 사용되는 주요 탐지 방법과
-          분석 항목을 확인할 수 있습니다. 이 서비스는 분석할
-          사이트에 접속하지 않으므로 페이지 내용(HTML, 텍스트,
-          이미지)은 분석하지 않습니다.
+          분석 항목을 확인할 수 있습니다.
         </p>
       </div>
 

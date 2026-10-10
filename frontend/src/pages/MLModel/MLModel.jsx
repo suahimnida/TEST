@@ -11,11 +11,6 @@ const features = [
 // 학습에서 일부러 뺀 것과 이유
 const excluded = [
   {
-    title: "HTML·페이지 내용 특징",
-    reason:
-      "학습 데이터(PhiUSIIL)에는 HTML 기반 열이 있지만, 이 서비스는 사이트에 접속하지 않아 실제 분석 때 만들 수 없으므로 학습에서도 뺐습니다.",
-  },
-  {
     title: "https·www 유무",
     reason:
       "기존 학습 데이터의 정상 URL이 모두 https://www. 형태라, 넣으면 모델이 형태만 보고 판단하는 지름길을 배웁니다.",
@@ -32,7 +27,6 @@ function MLModel() {
 
         <p className="ml-model-description">
           URL 문자열만 보고 피싱 가능성을 계산하는 머신러닝 모델입니다.
-          사이트에 접속하지 않으므로 페이지 내용은 사용하지 않습니다.
         </p>
       </div>
 
@@ -145,7 +139,7 @@ function MLModel() {
         <div className="ml-info-card">
           <span>INPUT</span>
           <strong>URL 원문</strong>
-          <p>페이지 내용은 사용하지 않음</p>
+          <p>입력한 URL 문자열</p>
         </div>
 
         <div className="ml-info-card">

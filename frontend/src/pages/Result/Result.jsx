@@ -71,7 +71,7 @@ function Result({ url, result }) {
 
   const data = result;
 
-  // 예전 분석 기록에 남아 있는 "HTML 분석", "페이지 콘텐츠" 항목은 실제로 분석하지 않은 것이라 보여 주지 않는다
+  // 화면에 이름이 정해진 탐지 항목만 보여 준다
   const detectionEntries = Object.entries(
     data.detections || {}
   ).filter(([key, value]) => value !== null && key in detectionLabels);
@@ -126,7 +126,7 @@ function Result({ url, result }) {
         <p>
           URL 문자열과 공개된 등록 정보(KISA 블랙리스트, 도메인 등록일,
           인증서 기록, 호스팅 정보)만 확인했습니다. 이 사이트에는 접속하지
-          않았으며 페이지 내용(HTML, 텍스트, 이미지)은 확인하지 않았습니다.
+          않았습니다.
         </p>
       </div>
 
