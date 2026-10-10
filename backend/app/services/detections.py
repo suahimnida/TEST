@@ -51,6 +51,48 @@ def _result(reasons: list[str], notes: list[str]) -> dict:
     return {"status": status, "reasons": reasons, "notes": notes or [_SHORT_REASON[status]]}
 
 
+# 해킹당한 정상 사이트에 피싱 페이지를 숨길 때 자주 쓰는 폴더
+CMS_DIRS = ("/wp-content/", "/wp-includes/", "/wp-admin/", "/administrator/", "/sites/default/files/",
+            "/.well-known/", "/cgi-bin/")
+# 워드프레스 관리 화면은 정상 사이트에도 로그인 단어가 있으므로 다른 브랜드 이름만 근거로 본다
+ADMIN_DIRS = ("/wp-admin/", "/administrator/")
+CREDENTIAL_WORDS = ("login", "signin", "sign-in", "logon", "verify", "verification", "account", "secure",
+                    "update", "confirm", "password", "banking", "webscr", "wallet", "recovery", "unlock")
+_EMBEDDED_DOMAIN = re.compile(r"/(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|co\.kr|kr|me|io))(?=[/?#]|$)")
+
+
+def _path_patterns(path: str, registered: str) -> list[str]:
+    """접속 없이 경로만 보고 찾는 해킹 사이트 피싱 페이지 형태."""
+    reasons = []
+    lower = path.lower()
+    tokens = set(re.split(r"[^a-z0-9]+", lower))  # 'accounting'이 'account'로 잡히지 않도록 단어 단위로 비교
+    brands = [b for b, official in OFFICIAL_DOMAINS.items() if b in tokens and registered not in official]
+    words = [w for w in CREDENTIAL_WORDS if w in tokens]
+
+    for cms in CMS_DIRS:
+        if cms not in lower:
+            continue
+        after = set(re.split(r"[^a-z0-9]+", lower.split(cms, 1)[1]))
+        if cms not in ADMIN_DIRS and any(w in after for w in CREDENTIAL_WORDS):
+            found = [w for w in CREDENTIAL_WORDS if w in after][:3]
+            reasons.append(
+                f"사이트 관리용 폴더({cms.strip('/')}) 아래에 로그인·인증 경로({', '.join(found)})가 있습니다. "
+                "해킹당한 정상 사이트에 피싱 페이지를 숨기는 전형적인 형태입니다."
+            )
+        elif brands:
+            reasons.append(f"사이트 관리용 폴더({cms.strip('/')}) 아래에 다른 브랜드 이름('{brands[0]}')이 있습니다.")
+        break
+
+    if brands and words and not reasons:
+        reasons.append(f"경로에 '{brands[0]}' 브랜드 이름과 로그인·인증 단어({words[0]})가 함께 있지만 공식 도메인이 아닙니다.")
+
+    for embedded in _EMBEDDED_DOMAIN.findall(lower):
+        if _registered_domain(embedded) != registered and any(_registered_domain(embedded) in o for o in OFFICIAL_DOMAINS.values()):
+            reasons.append(f"경로 안에 다른 공식 도메인({embedded})이 들어 있어 진짜 주소처럼 보이게 합니다.")
+            break
+    return reasons
+
+
 def _analyze_url(url: str, host: str, feats: dict, registered: str, official: bool) -> dict:
     reasons, notes = [], []
     if feats["is_ip_domain"]:
@@ -73,6 +115,10 @@ def _analyze_url(url: str, host: str, feats: dict, registered: str, official: bo
         reasons.append(f"도메인 이름({registered})에 하이픈(-)이 {dash}개 있어 여러 단어를 이어 붙인 형태입니다.")
     elif dash == 2:
         notes.append(f"도메인 이름({registered})에 하이픈(-)이 2개 있습니다.")
+
+    if not official:
+        parsed = safe_urlparse(url)
+        reasons += _path_patterns(parsed.path + ("?" + parsed.query if parsed.query else ""), registered)
 
     notes.append(f"URL 길이 {feats['url_length']}자, 경로 길이 {feats['path_length']}자")
     return _result(reasons, notes)
@@ -128,14 +174,8 @@ def _analyze_domain(url: str, host: str, feats: dict, registered: str) -> dict:
     if url.strip().lower().startswith("http://"):
         notes.append("HTTPS가 아닌 HTTP 주소입니다. 입력한 정보가 암호화되지 않을 수 있습니다.")
     notes.append(f"등록 도메인: {registered}")
-    notes.append("인증서와 리디렉션은 사이트에 직접 접속해야 확인할 수 있어 분석하지 않았습니다.")
+    notes.append("인증서 기록은 평판 신호에서 확인합니다. 리디렉션은 사이트에 접속해야 알 수 있어 확인하지 않았습니다.")
     return _result(reasons, notes)
-
-
-_NOT_ANALYZED_NOTE = (
-    "페이지에 직접 접속해야 분석할 수 있는 항목입니다. "
-    "서버가 의심 사이트에 접속하는 위험을 피하기 위해 분석하지 않았습니다."
-)
 
 
 def analyze(url: str) -> dict:
@@ -144,11 +184,10 @@ def analyze(url: str) -> dict:
     registered = host if feats["is_ip_domain"] else _registered_domain(host)
     official = any(registered in o for o in OFFICIAL_DOMAINS.values())
 
-    not_analyzed = {"status": "not_analyzed", "reasons": [], "notes": [_NOT_ANALYZED_NOTE]}
+    # 페이지 내용(HTML·이미지)은 사이트에 접속해야 알 수 있어 분석하지 않는다. 그런 항목을 "분석되지 않음"으로
+    # 늘 보여 주면 분석하는 것처럼 보이므로 아예 보내지 않고, 결과 화면 맨 위의 분석 범위 안내에서 밝힌다
     return {
         "url": _analyze_url(url, host, feats, registered, official),
         "url_stats": _analyze_url_stats(host, feats),
         "domain": _analyze_domain(url, host, feats, registered),
-        "html": dict(not_analyzed),
-        "image": dict(not_analyzed),
     }

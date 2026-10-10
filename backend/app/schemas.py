@@ -47,6 +47,7 @@ class Detections(BaseModel):
     url: dict | None = None
     url_stats: dict | None = None
     domain: dict | None = None
+    # 페이지 내용(HTML·이미지)은 분석하지 않아 새 결과에서는 항상 비어 있다. 예전 기록과 호환하려고 남겨 둔다
     html: dict | None = None
     image: dict | None = None
     reputation: dict | None = None  # 평판 신호 (참고 근거, 점수 미반영)
