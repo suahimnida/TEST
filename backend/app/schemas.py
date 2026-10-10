@@ -71,6 +71,11 @@ class AnalysisResponse(BaseModel):
     id: str
     status: Literal["completed", "failed"]
     url: str
+    # 요청한 사람에 따라 달라지는 값 (저장하지 않는다)
+    #   viewer: owner(내 결과) / public(남의 공개 결과) / shared(공유 링크로 연 결과)
+    #   share_token: 공유 링크 토큰. 본인에게만 보낸다
+    viewer: Literal["owner", "public", "shared"] | None = None
+    share_token: str | None = None
     is_public: bool = False
     verdict: Literal["phishing", "suspicious", "normal"] | None = None
     confidence: float | None = None
@@ -167,3 +172,12 @@ class ReportResponse(BaseModel):
     contacts: list[ReportContact]
     limitations: list[str]
     references: list[str]
+
+
+
+class VisibilityRequest(BaseModel):
+    is_public: bool
+
+
+class ShareResponse(BaseModel):
+    token: str | None = None  # 없으면 공유 링크가 없는 상태

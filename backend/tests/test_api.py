@@ -156,7 +156,8 @@ def test_anyone_can_read_public_result():
 
     res = client.get(f"/api/v1/analyses/{created['id']}")
     assert res.status_code == 200
-    assert res.json() == created
+    # 만든 사람에게는 owner, 다른 사람에게는 public으로 보이는 것만 다르다
+    assert res.json() == {**created, "viewer": "public"}
 
 
 def test_read_analysis_unknown_id_returns_404():

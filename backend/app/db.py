@@ -1,4 +1,5 @@
 import logging
+import secrets
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -83,6 +84,16 @@ def init_db() -> None:
             )
             """
         )
+        # 비공개 결과의 공유 링크. 분석 1건당 링크 1개, 공유를 중지하면 행을 지운다
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS shares (
+                token       TEXT PRIMARY KEY,
+                analysis_id TEXT NOT NULL UNIQUE,
+                created_at  TEXT NOT NULL
+            )
+            """
+        )
 
 
 def save_analysis(result: AnalysisResponse, client_id: str | None) -> None:
@@ -99,7 +110,7 @@ def save_analysis(result: AnalysisResponse, client_id: str | None) -> None:
                 datetime.now(timezone.utc).isoformat(),
                 client_id,
                 int(result.is_public),
-                result.model_dump_json(),
+                result.model_dump_json(exclude=VIEW_ONLY_FIELDS),
             ),
         )
 
@@ -114,6 +125,91 @@ def get_analysis(analysis_id: str, client_id: str | None) -> AnalysisResponse | 
     if row is None:
         return None
     return AnalysisResponse.model_validate_json(row["result_json"])
+
+
+# 요청한 사람에 따라 달라지는 값이라 저장하지 않는다
+VIEW_ONLY_FIELDS = {"viewer", "share_token"}
+
+
+def get_analysis_access(analysis_id: str, client_id: str | None):
+    """공개 결과이거나 본인 결과이면 (분석 결과, 저장 시각, 본인 여부)를 돌려준다. 아니면 None."""
+    with _connect() as (conn, p):
+        row = conn.execute(
+            f"SELECT result_json, created_at, client_id FROM analyses "
+            f"WHERE id = {p} AND (is_public = 1 OR client_id = {p})",
+            (analysis_id, client_id),
+        ).fetchone()
+    if row is None:
+        return None
+    owner = client_id is not None and row["client_id"] == client_id
+    return AnalysisResponse.model_validate_json(row["result_json"]), row["created_at"], owner
+
+
+def set_visibility(analysis_id: str, client_id: str | None, is_public: bool) -> AnalysisResponse | None:
+    """본인 결과의 공개 여부를 바꾼다. 본인 결과가 아니면 None."""
+    if client_id is None:
+        return None
+    with _connect() as (conn, p):
+        row = conn.execute(
+            f"SELECT result_json FROM analyses WHERE id = {p} AND client_id = {p}", (analysis_id, client_id)
+        ).fetchone()
+        if row is None:
+            return None
+        result = AnalysisResponse.model_validate_json(row["result_json"])
+        result.is_public = is_public
+        conn.execute(
+            f"UPDATE analyses SET is_public = {p}, result_json = {p} WHERE id = {p} AND client_id = {p}",
+            (int(is_public), result.model_dump_json(exclude=VIEW_ONLY_FIELDS), analysis_id, client_id),
+        )
+    return result
+
+
+def is_owner(analysis_id: str, client_id: str | None) -> bool:
+    if client_id is None:
+        return False
+    with _connect() as (conn, p):
+        row = conn.execute(
+            f"SELECT 1 FROM analyses WHERE id = {p} AND client_id = {p}", (analysis_id, client_id)
+        ).fetchone()
+    return row is not None
+
+
+def get_share_token(analysis_id: str) -> str | None:
+    with _connect() as (conn, p):
+        row = conn.execute(f"SELECT token FROM shares WHERE analysis_id = {p}", (analysis_id,)).fetchone()
+    return row["token"] if row else None
+
+
+def create_share(analysis_id: str) -> str:
+    """공유 링크 토큰을 만든다. 이미 있으면 같은 토큰을 돌려준다. 토큰은 추측할 수 없는 무작위 문자열이다."""
+    existing = get_share_token(analysis_id)
+    if existing:
+        return existing
+    token = secrets.token_urlsafe(16)
+    with _connect() as (conn, p):
+        conn.execute(
+            f"INSERT INTO shares (token, analysis_id, created_at) VALUES ({p}, {p}, {p})",
+            (token, analysis_id, datetime.now(timezone.utc).isoformat()),
+        )
+    return token
+
+
+def delete_share(analysis_id: str) -> None:
+    with _connect() as (conn, p):
+        conn.execute(f"DELETE FROM shares WHERE analysis_id = {p}", (analysis_id,))
+
+
+def get_shared(token: str):
+    """공유 링크로 연 결과. (분석 결과, 저장 시각) 또는 None (없거나 공유를 중지한 링크)."""
+    with _connect() as (conn, p):
+        row = conn.execute(
+            f"SELECT a.result_json, a.created_at, a.id FROM shares s JOIN analyses a ON a.id = s.analysis_id "
+            f"WHERE s.token = {p}",
+            (token,),
+        ).fetchone()
+    if row is None:
+        return None
+    return AnalysisResponse.model_validate_json(row["result_json"]), row["created_at"]
 
 
 def get_analysis_record(analysis_id: str, client_id: str | None):
