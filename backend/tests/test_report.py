@@ -1,5 +1,3 @@
-"""후속 조치 조사(첫번째 키)와 리포트 작성(두번째 키) 테스트."""
-
 import io
 import uuid
 
@@ -27,7 +25,6 @@ def analyze(url, client_id=None, is_public=False):
 
 
 class FakeLLM:
-    """OpenAIJsonClient 대신 정해진 답(또는 예외)을 돌려준다. 받은 프롬프트는 prompts에 쌓인다."""
 
     def __init__(self, model, reply=None, error=None):
         self.model = model
@@ -52,7 +49,6 @@ REPORT_REPLY = {"summary": "네이버를 사칭한 피싱 URL입니다.", "risk_
 
 @pytest.fixture
 def analysis():
-    """테스트에서는 RAG가 꺼져 있어 유사 사례를 직접 넣는다."""
     body, _ = analyze(PHISHING_URL)
     result = AnalysisResponse(**body)
     result.similar_cases = [
@@ -151,7 +147,6 @@ def test_report_schema_has_only_narrative_fields():
 
 @pytest.fixture
 def fake_llms(monkeypatch):
-    """API 엔드포인트가 가짜 LLM 두 개를 쓰게 한다."""
     f, r = FakeLLM("followup-model", FOLLOWUP_REPLY), FakeLLM("report-model", REPORT_REPLY)
     monkeypatch.setattr(main, "_followup_client", lambda: f)
     monkeypatch.setattr(main, "_report_client", lambda: r)

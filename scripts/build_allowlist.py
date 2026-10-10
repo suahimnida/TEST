@@ -1,17 +1,3 @@
-"""공식 도메인 허용 목록 만들기.
-
-출처
-    Moz Top 500 (npm 패키지 top-sites, MIT 라이선스)
-    국내 주요 서비스 (아래 KOREAN_MAJOR)
-    --tranco 로 Tranco 상위 사이트 CSV(순위,도메인)를 주면 상위 --tranco-top개를 추가
-
-누구나 페이지를 올릴 수 있는 서비스(blogspot.com, sites.google.com 등)는 목록에 있어도
-backend/app/services/allowlist.py 에서 항상 제외한다.
-
-실행: python scripts/build_allowlist.py [--tranco top-1m.csv --tranco-top 10000]
-출력: backend/resources/allowlist/domains.txt
-"""
-
 import argparse
 import csv
 import io

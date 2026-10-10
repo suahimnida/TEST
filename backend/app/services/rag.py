@@ -181,7 +181,6 @@ def _retrieve(features: dict) -> list[dict]:
 
 
 def similar(url: str) -> RagResult:
-    """특징이 비슷한 과거 사례 검색. 결과는 ML 근거를 보조하는 참고 정보다."""
     if _state is None:
         return RagResult()
     try:
@@ -197,7 +196,6 @@ def similar(url: str) -> RagResult:
 
 
 def compose(evidence: list[dict], guides: list[dict]) -> str | None:
-    """근거[E]와 가이드[G]로 출처가 있는 설명을 Claude에게 쓰게 한다. 쓸 수 없으면 None (템플릿으로 대신)."""
     from app.services.guides import check_citations
 
     client = (_state or {}).get("client")

@@ -1,19 +1,3 @@
-"""평판 신호 평가 데이터 모으기 (매일 실행).
-
-도메인 등록일 같은 신호는 "조회한 날" 기준이라, 몇 년 전 피싱 목록을 지금 조회하면 이미 만료되거나
-다른 사람이 다시 등록한 도메인이 섞여 결과가 왜곡된다. 그래서 새로 발견된 피싱 URL을 그날 바로 조회해서 쌓는다.
-
-    python scripts/collect_reputation.py collect                 피싱 피드 + 정상 목록을 조회해 기록
-    python scripts/collect_reputation.py collect --phishing-file 새피싱.txt --legit-file 정상.txt
-    python scripts/collect_reputation.py summarize               신호별로 정상·피싱 분포 비교
-
-피싱: 기본은 OpenPhish 공개 피드(https://openphish.com/feed.txt). KISA 최신 목록 등 다른 파일도 쓸 수 있다.
-정상: 허용 목록(유명 사이트)만 쓰면 "정상은 모두 오래된 도메인"이 되어 효과가 과장된다.
-      --legit-file로 Tranco 1만~10만 위처럼 덜 유명한 사이트를 함께 넣는 것을 권장한다.
-
-출력: evaluation/reputation/log.csv (누적), evaluation/reputation/summary.md
-"""
-
 import argparse
 import csv
 import random

@@ -1,9 +1,3 @@
-"""분석 결과의 근거를 수치로 설명한다 (ml_integration/url_explain.py).
-
-    model      ML 모델(v2)의 부분별·글자별·n-gram별 기여도. 블랙리스트로 확정돼 ML을 쓰지 않았으면 없다.
-    reference  정상 데이터 대비 위치 (참고 지표, 모델 입력 아님)
-"""
-
 import logging
 import sys
 from pathlib import Path

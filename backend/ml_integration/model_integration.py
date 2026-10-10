@@ -34,7 +34,6 @@ _v2 = None
 
 
 def _load_v2():
-    """URL 모델 v2 (scripts/train_url_model.py). 파일이 없으면 None이고 기존 모델을 쓴다."""
     global _v2
     if _v2 is None:
         path = os.path.join(MODEL_DIR, "url_model_v2.joblib")

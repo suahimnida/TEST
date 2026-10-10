@@ -1,11 +1,3 @@
-"""공식 도메인 허용 목록.
-
-목록에 있는 도메인은 ML 점수만으로 피싱 판정을 내리지 않는다 (KISA 블랙리스트는 그대로 우선).
-누구나 페이지를 올릴 수 있는 서비스는 목록에 있어도 항상 제외한다. 이런 곳은 피싱 페이지가 실제로 자주 올라온다.
-
-목록 파일: resources/allowlist/domains.txt (scripts/build_allowlist.py 로 생성)
-"""
-
 import logging
 import sys
 from pathlib import Path

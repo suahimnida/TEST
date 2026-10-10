@@ -1,18 +1,3 @@
-"""평판 신호: 사이트에 접속하지 않고 얻는 도메인 정보.
-
-    도메인 등록일   RDAP (IANA 안내 목록 → TLD의 RDAP 서버)
-    인증서 첫 발급  인증서 투명성(CT) 로그 검색 (crt.sh)
-    호스팅 정보     DNS-over-HTTPS로 IP 조회 → Team Cymru DNS로 ASN(호스팅 업체) 조회
-
-분석 대상 사이트의 웹 서버에는 연결하지 않는다. 외부 서비스에는 등록 도메인(또는 호스트) 이름만 보내고
-경로·쿼리는 보내지 않는다. 다만 도메인의 DNS 서버를 공격자가 직접 운영하면 "누군가 조회했다"는 흔적은 남을 수 있다.
-
-지금은 "참고 근거"로만 쓰고 점수에는 반영하지 않는다. 효과는 scripts/collect_reputation.py로 모은
-데이터로 평가한 뒤 반영 여부를 정한다 (docs/evaluation.md 1번 평가 방식).
-
-환경변수: REPUTATION_ENABLED=0 이면 조회하지 않는다 (테스트·오프라인용)
-"""
-
 import ipaddress
 import logging
 import os
@@ -164,7 +149,6 @@ def _safe(fn, *args) -> dict:
 
 
 def lookup(url: str) -> dict:
-    """세 신호를 동시에 조회한다. 결과는 도메인별로 하루 동안 캐시한다."""
     host = split_url(url)["host"].lower().strip(".")
     if not host:
         return {}
@@ -194,7 +178,6 @@ def lookup(url: str) -> dict:
 
 
 def to_detection(info: dict) -> dict | None:
-    """탐지 결과(detections) 형식으로 바꾼다. 점수에는 쓰지 않는 참고 근거다."""
     if not info:
         return None
     reasons, notes = [], []

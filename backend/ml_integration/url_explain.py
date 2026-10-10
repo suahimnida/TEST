@@ -1,17 +1,3 @@
-"""URL 모델 v2의 판단 근거를 수치로 설명한다.
-
-1. 모델 기여도 (정확한 값)
-   v2는 문자 n-gram 값에 가중치를 곱해 더하는 선형 모델이다. 그래서 점수(로그 오즈)는
-   "기본값 + 각 n-gram의 (가중치 × 값)"과 정확히 같다. 각 n-gram의 기여를 그 n-gram을 이루는
-   글자들에 똑같이 나눠 담으면 글자별 위험도가 되고, 이를 URL 부분별로 더하면 부분별 기여도가 된다.
-   양수는 피싱 쪽, 음수는 정상 쪽으로 민 정도다.
-
-2. 정상 데이터 대비 위치 (참고 지표)
-   URL 길이, 도메인 길이 같은 지표를 학습 데이터의 정상 URL 분포와 비교한다.
-   이 지표들은 v2 모델의 입력이 아니라 사람이 이해하기 쉽도록 보여 주는 참고 정보다.
-   분포는 scripts/build_reference_stats.py 로 만든 resources/reference/url_stats.json 을 쓴다.
-"""
-
 import bisect
 import json
 from pathlib import Path
@@ -50,7 +36,6 @@ _TEXT_FUNCS = {
 
 
 def segment_url(raw: str) -> list:
-    """원문 URL을 (부분 이름, 시작, 끝) 목록으로 나눈다. 원문 글자는 바꾸지 않는다."""
     p = uf.split_url(raw)
     raw = p["raw"]
     parts = []
@@ -108,7 +93,6 @@ def _occurrences(text: str, gram: str) -> list:
 
 
 def explain_model(model, url: str, top: int = 6) -> dict:
-    """선형 모델(v2 파이프라인)의 점수를 글자별·부분별·n-gram별 기여로 나눈다."""
     raw = uf.split_url(url)["raw"]
     union = model.named_steps["features"]
     coef = model.named_steps["clf"].coef_[0]
@@ -170,7 +154,6 @@ def explain_model(model, url: str, top: int = 6) -> dict:
 
 
 def metric_values(url: str) -> dict:
-    """참고 지표 값. scheme과 www는 빼고 잰다 (형태에 따라 값이 달라지지 않도록)."""
     p = uf.split_url(url)
     row = dict(zip(uf.STRUCT_NAMES, uf._struct_row(url)))
     host = uf.strip_www(p["host"]).lower()
@@ -198,7 +181,6 @@ def load_stats() -> dict | None:
 
 
 def percentile(value: float, quantiles: list) -> float:
-    """정상 URL 중 이 값보다 작은 비율(%). quantiles는 0~100% 지점 101개."""
     lo = bisect.bisect_left(quantiles, value)
     hi = bisect.bisect_right(quantiles, value)
     return round(min(max((lo + hi) / 2 / (len(quantiles) - 1) * 100, 0.0), 100.0), 1)

@@ -75,7 +75,6 @@ def test_blacklist_match_skips_rag_and_model(monkeypatch):
 
 
 def test_ml_rag_llm_roles(monkeypatch):
-    """ML 근거 → RAG 가이드 → LLM 설명 순서로 채워지고, 설명은 근거·가이드 번호만 쓴다."""
     fake = rag.RagResult(
         features={"url_length": 20},
         similar_cases=[{"url": "http://evil.tk", "label": 1, "similarity": 0.91}],

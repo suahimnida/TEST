@@ -1,14 +1,3 @@
-"""URL 모델 v2의 전처리와 특징.
-
-원칙
-    - URL 원문을 바꾸지 않는다. 대소문자, 특수문자, 끝의 / 를 그대로 둔다.
-    - scheme·host·path·query를 항상 같은 규칙으로 나눈다. scheme이 없는 입력도 같은 결과가 나온다.
-    - scheme과 www 유무는 특징으로 쓰지 않는다. 학습 데이터에서 정답과 섞여 있던 형태 정보라서,
-      넣으면 모델이 다시 "https://www.이면 정상"이라는 지름길을 배운다.
-
-학습(scripts/train_url_model.py)과 서비스(model_integration.py)가 이 파일을 함께 쓴다.
-"""
-
 import math
 import re
 from collections import Counter
@@ -34,7 +23,6 @@ _SCHEME = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.-]*)://")
 
 
 def split_url(raw: str) -> dict:
-    """원문을 scheme, host, path, query로 나눈다. 원문의 글자는 바꾸지 않는다."""
     raw = str(raw).strip()
     m = _SCHEME.match(raw)
     scheme = m.group(1) if m else ""
@@ -78,12 +66,10 @@ def entropy(text: str) -> float:
 
 
 def text_raw(urls) -> list:
-    """S1: 원문 그대로"""
     return [split_url(u)["raw"] for u in urls]
 
 
 def text_normalized(urls) -> list:
-    """S2: scheme과 앞의 www.만 뺀 원문 (나머지 글자는 그대로)"""
     out = []
     for u in urls:
         p = split_url(u)
@@ -160,8 +146,6 @@ def entropy_all(urls) -> np.ndarray:
 
 
 def calibrate(raw: float, suspicious: float, phishing: float) -> float:
-    """모델 확률(0~100)을 서비스 점수로 바꾼다. 검증 세트로 정한 기준점이 서비스 기준(의심 30점, 피싱 60점)에 오도록
-    구간별로 늘리거나 줄인다. 순서는 바뀌지 않는다."""
     if raw < suspicious:
         return 30 * raw / suspicious
     if raw < phishing:

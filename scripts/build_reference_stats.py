@@ -1,12 +1,3 @@
-"""정상 데이터 대비 위치를 보여 줄 기준 분포 만들기.
-
-학습 데이터(data/train_v2.csv)의 정상·피싱 URL에서 참고 지표(URL 길이, 도메인 길이 등)를 계산해
-정상 URL의 0~100% 지점(101개), 중앙값, 상위 95% 지점과 피싱 URL의 중앙값을 저장한다.
-
-실행: python scripts/build_reference_stats.py
-출력: backend/resources/reference/url_stats.json
-"""
-
 import json
 import sys
 from datetime import date

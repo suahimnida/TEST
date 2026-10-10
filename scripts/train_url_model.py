@@ -1,20 +1,3 @@
-"""URL 모델 v2 단계별 학습과 비교.
-
-문자 n-gram 기준선에서 시작해 정규화, 구조 분리, 구조 특징, 엔트로피를 하나씩 더하며 비교한다.
-모델 선택은 학습 데이터에서 도메인 단위로 떼어 낸 검증 세트로 하고,
-외부 평가 세트(evaluation/eval_set.csv)는 결과 확인에만 쓴다.
-
-선택 규칙: 검증 ROC-AUC가 최고와 0.005 이내인 단계 중 가장 단순한 단계 (S1 < S2 < ... < S5b)
-기준점: 검증 세트 오탐률이 2% 이하가 되는 점수를 "피싱", 5% 이하가 되는 점수를 "의심" 기준으로 정하고,
-        서비스 화면 기준(피싱 60점, 의심 30점)에 맞게 점수를 변환한다 (url_features.calibrate)
-
-실행: python scripts/train_url_model.py            모든 단계 학습 후 최종 선택
-      python scripts/train_url_model.py --resume   이어서 학습
-      python scripts/train_url_model.py --finalize 학습된 단계 결과로 최종 모델만 다시 만들기
-출력: evaluation/results/ablation.md, ablation.json
-      backend/ml_integration/models/url_model_v2.joblib, url_model_v2_report.json (선택된 모델)
-"""
-
 import argparse
 import json
 import sys

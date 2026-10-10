@@ -1,14 +1,3 @@
-"""외부 평가 세트 만들기.
-
-피싱: KISA 2023 목록 중 2024 블랙리스트에 없고, 학습 데이터(PhiUSIIL)에 없던 도메인.
-      한 캠페인이 평가를 좌우하지 않도록 등록 도메인당 최대 --max-per-domain건만 쓴다
-정상: evaluation/legit_domains.csv 도메인의 4가지 형태 + evaluation/legit_paths.csv
-      (--tranco로 Tranco 상위 사이트 목록 CSV를 주면 그 도메인도 추가)
-
-실행: python scripts/build_eval_set.py
-출력: evaluation/eval_set.csv
-"""
-
 import argparse
 import csv
 import json
@@ -49,7 +38,6 @@ def blacklist_key(url: str) -> str:
 
 
 def describe(url: str) -> dict:
-    """URL 형태 분류. 원문은 바꾸지 않는다."""
     raw = url.strip()
     scheme = raw.split("://", 1)[0].lower() if "://" in raw else ""
     parts = urlsplit(raw if scheme else "http://" + raw)

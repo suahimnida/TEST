@@ -1,13 +1,3 @@
-"""ML 모델 평가: 오탐률·미탐률, 형태별 결과, 오답 분석.
-
-실행:
-    python scripts/evaluate_model.py              서비스 모델(v2) 외부 평가
-    python scripts/evaluate_model.py --model v1   기존 랜덤 포레스트 모델 외부 평가
-    python scripts/evaluate_model.py --internal   기존 PhiUSIIL 내부 평가 세트도 함께
-
-출력: evaluation/results/ (metrics.json, summary.md, false_positives.csv, false_negatives.csv)
-"""
-
 import argparse
 import json
 import sys
@@ -39,7 +29,6 @@ REQUIRED_SKLEARN = "1.3.2"
 
 
 def check_environment():
-    """모델은 scikit-learn 1.3.2로 저장됐다. 다른 버전으로 불러오면 오류 없이 엉뚱한 점수가 나온다."""
     if sklearn.__version__ != REQUIRED_SKLEARN:
         sys.exit(
             f"[중단] scikit-learn {sklearn.__version__}에서는 모델 점수가 올바르게 계산되지 않습니다.\n"
@@ -95,14 +84,12 @@ def metrics(y, s) -> dict:
 
 
 def shortcut_rule(urls) -> np.ndarray:
-    """데이터셋 편향을 확인하는 비교 기준: https://www.로 시작하고 경로가 없으면 정상(0), 아니면 피싱(1)."""
     u = pd.Series(list(urls)).str.strip().str.lower()
     has_path = u.str.replace(r"^[a-z]+://", "", regex=True).str.contains("/.", regex=True)
     return (~(u.str.startswith("https://www.") & ~has_path)).astype(int).to_numpy() * 100
 
 
 def error_type(row) -> str:
-    """오답이 왜 생겼는지 URL 형태로 분류한다."""
     url = row["url"].lower()
     host = (safe_urlparse(row["url"]).hostname or "").lower()
     if row["label"] == 0:
@@ -138,7 +125,6 @@ def slice_table(df, label, col, values) -> list:
 
 
 def internal_eval(model, columns) -> dict:
-    """학습 스크립트(train_model.py)와 같은 방식으로 나눈 내부 평가 세트."""
     from sklearn.model_selection import train_test_split
 
     raw = pd.read_csv(ROOT / "data" / "PhiUSIIL_Phishing_URL_Dataset.csv", usecols=["URL", "label"])

@@ -1,22 +1,3 @@
-"""편향을 고친 학습 데이터 만들기.
-
-기존 학습 데이터(PhiUSIIL)는 정상 URL이 100% https://www.도메인 형태이고 경로가 없어서,
-모델이 "https://www.이면 정상"이라는 지름길을 배웠다 (docs/evaluation.md).
-
-1. 출처를 섞는다
-    PhiUSIIL           정상 홈페이지 + 피싱
-    공개 URL 데이터셋   경로가 있는 정상 URL + 경로가 있는 피싱
-                       (github.com/faizann24/Using-machine-learning-to-detect-malicious-URLs, data/data.csv)
-    KISA 2024          국내 피싱 (도메인만 있는 형태가 많다)
-2. 형태를 두 라벨에 똑같이 바꾼다
-    scheme(https/http/없음)과 www 유무를 정상·피싱 모두 같은 확률로 무작위로 정해서, 형태만으로는 정답을 알 수 없게 한다.
-    피싱 일부는 경로를 떼어 도메인만 남긴다.
-3. 평가 세트(evaluation/eval_set.csv)에 있는 도메인은 학습에서 뺀다.
-
-실행: python scripts/build_training_set.py
-출력: data/train_v2.csv (url, label, source, domain)  label: 1=피싱, 0=정상
-"""
-
 import argparse
 import csv
 import random
@@ -43,7 +24,6 @@ SCHEMES = (("https://", 0.45), ("http://", 0.25), ("", 0.30))
 
 
 def reform(url: str, rng: random.Random, strip_path: bool) -> str:
-    """scheme과 www를 무작위로 다시 정한다. host 글자, 경로, 쿼리의 원문은 그대로 둔다."""
     p = split_url(url)
     host = p["netloc"]
     bare = host[4:] if host.lower().startswith("www.") else host

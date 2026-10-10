@@ -1,5 +1,3 @@
-"""평판 신호 테스트. 네트워크 대신 RDAP·crt.sh·DNS-over-HTTPS의 응답 형식을 흉내 낸 가짜 서버를 쓴다."""
-
 import json
 import uuid
 from datetime import datetime, timedelta, timezone

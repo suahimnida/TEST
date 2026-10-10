@@ -1,14 +1,3 @@
-"""ML·RAG·LLM 역할 분리.
-
-    ML   위험 근거를 만든다      → build_evidence(): 근거 목록 [E1] [E2] ...
-    RAG  근거에 맞는 대응 가이드  → retrieve():       가이드 목록 [G1] [G2] ...
-    LLM  둘을 합쳐 출처가 있는 설명 → rag.compose(), 실패하면 template_explanation()
-
-가이드는 resources/guides/guides.json (공식 기관 안내를 요약하고 출처 링크를 붙인 것)이다.
-LLM이 쓴 설명은 check_citations()로 검사해서, 근거·가이드에 없는 번호를 쓰거나
-전화번호·주소를 지어내면 버리고 템플릿으로 대신한다.
-"""
-
 import json
 import re
 from pathlib import Path
@@ -52,7 +41,6 @@ def _load() -> dict:
 
 
 def guide_for_action(action_id: str) -> dict | None:
-    """후속 조치에 출처를 붙이기 위해, 그 조치를 안내하는 첫 번째 가이드를 찾는다."""
     return next((g for g in _load()["guides"] if action_id in g["actions"]), None)
 
 
@@ -63,7 +51,6 @@ def guide_for_action(action_id: str) -> dict | None:
 
 def build_evidence(*, verdict, risk_score, blacklist, allowlist, model, explanation, detections,
                    similar_cases) -> list[dict]:
-    """판정에 쓰인 근거와 참고 근거를 번호 붙은 목록으로 만든다. 문장은 모두 서버가 만든 사실이다."""
     items = []
 
     def add(source, text, used):
@@ -95,7 +82,6 @@ def build_evidence(*, verdict, risk_score, blacklist, allowlist, model, explanat
 
 
 def evidence_tags(url: str, verdict: str | None, evidence: list[dict]) -> set:
-    """근거에서 어떤 상황인지 뽑아 가이드 검색에 쓴다."""
     text = " ".join(e["text"] for e in evidence).lower()
     lower = url.lower()
     tags = set()
@@ -124,7 +110,6 @@ def evidence_tags(url: str, verdict: str | None, evidence: list[dict]) -> set:
 
 
 def retrieve(tags: set, evidence: list[dict], top_k: int = 4) -> list[dict]:
-    """태그가 많이 겹치는 가이드를 먼저, 같으면 근거 문장과 글자가 비슷한 가이드를 앞에 둔다."""
     state = _load()
     query = " ".join(e["text"] for e in evidence) + " " + " ".join(TAG_LABELS.get(t, t) for t in tags)
     similarity = (state["vectorizer"].transform([query]) @ state["matrix"].T).toarray()[0]
@@ -155,7 +140,6 @@ _FORBIDDEN = re.compile(r"https?://|www\.|(?<!\d)\d{2,4}-\d{3,4}-\d{4}(?!\d)|(?<
 
 
 def check_citations(text: str, evidence: list[dict], guides: list[dict]) -> str:
-    """모든 문장에 출처 번호가 있고, 번호가 실제 근거·가이드를 가리키는지 검사한다. 어기면 ValueError."""
     text = (text or "").strip()
     if not text:
         raise ValueError("설명이 비어 있습니다")
@@ -179,7 +163,6 @@ VERDICT_KO = {"phishing": "피싱", "suspicious": "피싱 의심", "normal": "�
 
 
 def template_explanation(verdict: str | None, evidence: list[dict], guides: list[dict]) -> str:
-    """LLM을 쓸 수 없을 때 근거와 가이드로 같은 형식의 설명을 만든다."""
     def cite(text, ref):
         return f"{text.rstrip('.')} [{ref}]."
 

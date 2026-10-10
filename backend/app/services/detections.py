@@ -62,7 +62,6 @@ _EMBEDDED_DOMAIN = re.compile(r"/(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|
 
 
 def _path_patterns(path: str, registered: str) -> list[str]:
-    """접속 없이 경로만 보고 찾는 해킹 사이트 피싱 페이지 형태."""
     reasons = []
     lower = path.lower()
     tokens = set(re.split(r"[^a-z0-9]+", lower))  # 'accounting'이 'account'로 잡히지 않도록 단어 단위로 비교
