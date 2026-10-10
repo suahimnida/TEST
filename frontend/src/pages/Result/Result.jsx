@@ -234,6 +234,13 @@ function Result({ url, result }) {
                 출처:{" "}
                 {data.blacklist?.source || "-"}
               </p>
+
+              {data.allowlist?.matched && (
+                <p>
+                  공식 도메인 허용 목록: {data.allowlist.domain} (ML 점수만으로
+                  피싱 판정을 내리지 않음)
+                </p>
+              )}
             </div>
           </div>
         </div>
