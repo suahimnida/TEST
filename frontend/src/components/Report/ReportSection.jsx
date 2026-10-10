@@ -38,7 +38,7 @@ function formatTime(iso) {
 
 // PDF Blob을 사용자가 고른 위치에 저장한다.
 // 크롬·엣지는 저장 위치를 고르는 창을 띄우고, 지원하지 않는 브라우저는 다운로드 폴더에 저장한다.
-async function savePdf(analysisId) {
+async function savePdf(analysisId, shareToken) {
   const fileName = reportFileName(analysisId);
 
   if (window.showSaveFilePicker) {
@@ -64,7 +64,7 @@ async function savePdf(analysisId) {
     }
 
     if (handle) {
-      const blob = await fetchReportPdf(analysisId);
+      const blob = await fetchReportPdf(analysisId, shareToken);
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
@@ -72,7 +72,7 @@ async function savePdf(analysisId) {
     }
   }
 
-  const blob = await fetchReportPdf(analysisId);
+  const blob = await fetchReportPdf(analysisId, shareToken);
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -84,7 +84,7 @@ async function savePdf(analysisId) {
   return "downloaded";
 }
 
-function ReportSection({ analysisId }) {
+function ReportSection({ analysisId, shareToken = null }) {
   const [report, setReport] = useState(null);
   const [status, setStatus] = useState("idle"); // idle | loading | error
   const [pdfBusy, setPdfBusy] = useState(null); // view | save | null
@@ -95,7 +95,7 @@ function ReportSection({ analysisId }) {
     setMessage("");
 
     try {
-      setReport(await createReport(analysisId));
+      setReport(await createReport(analysisId, shareToken));
       setStatus("idle");
     } catch (error) {
       console.error(error);
@@ -113,7 +113,7 @@ function ReportSection({ analysisId }) {
     setMessage("");
 
     try {
-      const blob = await fetchReportPdf(analysisId);
+      const blob = await fetchReportPdf(analysisId, shareToken);
       const url = URL.createObjectURL(blob);
 
       if (viewer) {
@@ -139,7 +139,7 @@ function ReportSection({ analysisId }) {
     setMessage("");
 
     try {
-      const result = await savePdf(analysisId);
+      const result = await savePdf(analysisId, shareToken);
 
       if (result === "saved") {
         setMessage("PDF를 선택한 위치에 저장했습니다.");

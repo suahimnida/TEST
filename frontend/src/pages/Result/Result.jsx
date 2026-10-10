@@ -1,3 +1,4 @@
+import ShareControls from "../../components/Share/ShareControls";
 import GroundedAnalysis from "../../components/Grounded/GroundedAnalysis";
 import ModelExplanation from "../../components/Explanation/ModelExplanation";
 import ReportSection from "../../components/Report/ReportSection";
@@ -52,7 +53,7 @@ const matchTypeLabels = {
   host: "도메인 일치",
 };
 
-function Result({ url, result }) {
+function Result({ url, result, shareToken, onResultChange }) {
   if (!result) {
     return (
       <section className="result-page">
@@ -121,6 +122,9 @@ function Result({ url, result }) {
       </div>
 
       {/* 분석 범위: 사이트에 접속하지 않았다는 점을 결과보다 먼저 밝힌다 */}
+      {/* 공개 범위와 "링크가 있는 사람은 볼 수 있음" */}
+      {data.viewer && <ShareControls result={data} onChange={onResultChange} />}
+
       <div className="analysis-scope">
         <strong>분석 범위</strong>
         <p>
@@ -573,7 +577,7 @@ function Result({ url, result }) {
         )}
 
       {/* Report: 리포트 생성, PDF 보기·저장. 다른 분석 결과로 바뀌면 key로 상태를 초기화한다 */}
-      {data.id && <ReportSection key={data.id} analysisId={data.id} />}
+      {data.id && <ReportSection key={data.id} analysisId={data.id} shareToken={shareToken} />}
     </section>
   );
 }

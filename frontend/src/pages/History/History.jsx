@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import "./History.css";
 
-import { getAnalysis, listMyAnalyses } from "../../services/api";
+import { getAnalysis, listMyAnalyses, listPublicAnalyses } from "../../services/api";
 
 function History({ onViewResult }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  // mine: 이 브라우저의 기록 / public: 다른 사용자가 공개한 결과
+  const [tab, setTab] = useState("mine");
 
   useEffect(() => {
     const loadHistory = async () => {
+      setLoading(true);
       try {
-        const items = await listMyAnalyses();
+        const items = tab === "mine" ? await listMyAnalyses() : await listPublicAnalyses();
 
         setHistory(items);
       } catch (error) {
@@ -25,7 +28,18 @@ function History({ onViewResult }) {
     };
 
     loadHistory();
-  }, []);
+  }, [tab]);
+
+  const tabs = (
+    <div className="history-tabs" role="tablist">
+      <button className={tab === "mine" ? "on" : ""} onClick={() => setTab("mine")} role="tab">
+        내 기록
+      </button>
+      <button className={tab === "public" ? "on" : ""} onClick={() => setTab("public")} role="tab">
+        공개 분석
+      </button>
+    </div>
+  );
 
   const handleViewResult = async (item) => {
     try {
@@ -99,6 +113,8 @@ function History({ onViewResult }) {
           </div>
         </div>
 
+        {tabs}
+
         <div className="history-empty">
           <h3>분석 기록을 불러오는 중입니다.</h3>
         </div>
@@ -128,6 +144,8 @@ function History({ onViewResult }) {
         </div>
       </div>
 
+      {tabs}
+
       {/* Empty */}
       {history.length === 0 ? (
         <div className="history-empty">
@@ -135,12 +153,11 @@ function History({ onViewResult }) {
             ◷
           </div>
 
-          <h3>분석 기록이 없습니다.</h3>
-
+          <h3>{tab === "mine" ? "분석 기록이 없습니다." : "공개된 분석 결과가 없습니다."}</h3>
           <p>
-            웹사이트를 분석하면
-            <br />
-            이곳에서 분석 기록을 확인할 수 있습니다.
+            {tab === "mine"
+              ? "웹사이트를 분석하면 이곳에서 분석 기록을 확인할 수 있습니다."
+              : "분석할 때 '공개'를 선택하거나 결과 화면에서 공개로 바꾸면 이곳에 표시됩니다."}
           </p>
         </div>
       ) : (

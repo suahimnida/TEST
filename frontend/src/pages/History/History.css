@@ -412,3 +412,28 @@
     display: none;
   }
 }
+/* 내 기록 / 공개 분석 탭 */
+.history-tabs {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 4px;
+  border-radius: 9px;
+  background: #131617;
+}
+
+.history-tabs button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #8b9491;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.history-tabs button.on {
+  background: #42e8c4;
+  color: #0a0c0d;
+}

@@ -94,12 +94,17 @@ export async function getAnalysis(analysisId) {
   );
 }
 
+// 공유 링크로 연 결과는 토큰을 함께 보내야 리포트를 볼 수 있다
+function shareQuery(shareToken) {
+  return shareToken ? `?share=${encodeURIComponent(shareToken)}` : "";
+}
+
 // 분석 리포트 생성. 분석 1건당 한 번만 만들고, 이미 있으면 서버가 저장된 것을 돌려준다.
-export async function createReport(analysisId) {
+export async function createReport(analysisId, shareToken = null) {
   const clientId = await getClientId();
 
   return request(
-    `/api/v1/analyses/${analysisId}/report`,
+    `/api/v1/analyses/${analysisId}/report${shareQuery(shareToken)}`,
     {
       method: "POST",
       headers: {
@@ -111,11 +116,11 @@ export async function createReport(analysisId) {
 }
 
 // 리포트 PDF 파일(Blob)
-export async function fetchReportPdf(analysisId) {
+export async function fetchReportPdf(analysisId, shareToken = null) {
   const clientId = await getClientId();
 
   const response = await fetch(
-    `${API_BASE_URL}/api/v1/analyses/${analysisId}/report.pdf`,
+    `${API_BASE_URL}/api/v1/analyses/${analysisId}/report.pdf${shareQuery(shareToken)}`,
     {
       headers: {
         "X-Client-Id": clientId,
@@ -132,4 +137,58 @@ export async function fetchReportPdf(analysisId) {
 
 export function reportFileName(analysisId) {
   return `phishing-report-${String(analysisId).slice(0, 8)}.pdf`;
+}
+
+// 다른 사용자가 공개한 분석 기록 목록
+export async function listPublicAnalyses() {
+  const data = await request("/api/v1/analyses?scope=public", {}, "공개 분석 조회 실패");
+  return Array.isArray(data.items) ? data.items : [];
+}
+
+// 내 분석 결과의 공개 여부 바꾸기
+export async function setVisibility(analysisId, isPublic) {
+  const clientId = await getClientId();
+
+  return request(
+    `/api/v1/analyses/${analysisId}/visibility`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "X-Client-Id": clientId },
+      body: JSON.stringify({ is_public: isPublic }),
+    },
+    "공개 범위 변경 실패"
+  );
+}
+
+// "링크가 있는 사람은 볼 수 있음" 켜기. 이미 있으면 같은 토큰을 돌려준다
+export async function createShareLink(analysisId) {
+  const clientId = await getClientId();
+
+  const data = await request(
+    `/api/v1/analyses/${analysisId}/share`,
+    { method: "POST", headers: { "X-Client-Id": clientId } },
+    "공유 링크 생성 실패"
+  );
+  return data.token;
+}
+
+// 공유 중지. 이미 보낸 링크는 더 이상 열리지 않는다
+export async function revokeShareLink(analysisId) {
+  const clientId = await getClientId();
+
+  await request(
+    `/api/v1/analyses/${analysisId}/share`,
+    { method: "DELETE", headers: { "X-Client-Id": clientId } },
+    "공유 중지 실패"
+  );
+}
+
+// 공유 링크로 결과 열기 (브라우저 ID 없이도 열린다)
+export async function getSharedAnalysis(token) {
+  return request(`/api/v1/shared/${encodeURIComponent(token)}`, {}, "공유된 결과 조회 실패");
+}
+
+// 공유 링크 주소
+export function shareUrl(token) {
+  return `${window.location.origin}/?share=${encodeURIComponent(token)}`;
 }

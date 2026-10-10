@@ -171,3 +171,16 @@
     justify-content: center;
   }
 }
+/* 공유 링크가 중지됐거나 잘못된 경우 */
+.shared-error {
+  padding: 80px 0;
+}
+
+.shared-error h2 {
+  font-size: 28px;
+}
+
+.shared-error p {
+  margin-top: 10px;
+  color: #8b9491;
+}

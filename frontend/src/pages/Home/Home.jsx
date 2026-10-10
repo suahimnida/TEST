@@ -104,7 +104,8 @@ function Home({ onAnalyze, onOpenHistory }) {
             <div>
               <strong>비공개</strong>
               <span>
-                이 브라우저에서만 분석 결과를 조회할 수 있습니다.
+                이 브라우저에서만 볼 수 있습니다. 결과 화면에서 공유 링크를 만들면
+                링크가 있는 사람도 볼 수 있습니다.
               </span>
             </div>
           </label>
@@ -124,7 +125,7 @@ function Home({ onAnalyze, onOpenHistory }) {
             <div>
               <strong>공개</strong>
               <span>
-                다른 사용자도 분석 결과를 조회할 수 있습니다.
+                분석 기록의 '공개 분석'에서 누구나 결과를 볼 수 있습니다.
               </span>
             </div>
           </label>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "./components/Header/Header";
 import Home from "./pages/Home/Home";
 import Analysis from "./pages/Analysis/Analysis";
@@ -7,6 +7,7 @@ import History from "./pages/History/History";
 import DetectionMethods from "./pages/DetectionMethods/DetectionMethods";
 import Dataset from "./pages/Dataset/Dataset";
 import MLModel from "./pages/MLModel/MLModel";
+import { getSharedAnalysis } from "./services/api";
 import "./App.css";
 
 function App() {
@@ -14,10 +15,37 @@ function App() {
   const [targetUrl, setTargetUrl] = useState("");
   const [isPublic, setIsPublic] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+  // 공유 링크(?share=토큰)로 들어온 경우의 토큰. 리포트를 볼 때도 함께 보낸다
+  const [shareToken, setShareToken] = useState(null);
+  const [shareError, setShareError] = useState("");
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("share");
+    if (!token) return;
+    getSharedAnalysis(token)
+      .then((result) => {
+        setShareToken(token);
+        setTargetUrl(result.url);
+        setAnalysisResult(result);
+        setCurrentPage("result");
+      })
+      .catch(() => {
+        setShareError("공유가 중지됐거나 잘못된 링크입니다.");
+        setCurrentPage("shared-error");
+      });
+  }, []);
+
+  // 공유된 결과를 보다가 다른 화면으로 가면 주소에서 공유 토큰을 지운다
+  useEffect(() => {
+    if (currentPage !== "result" && currentPage !== "shared-error" && window.location.search.includes("share=")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [currentPage]);
 
   const handleAnalyze = (url, publicStatus) => {
     setTargetUrl(url);
     setIsPublic(publicStatus);
+    setShareToken(null);
     setCurrentPage("analysis");
   };
 
@@ -28,6 +56,7 @@ function App() {
 
   const handleViewHistory = (result) => {
     setTargetUrl(result.url);
+    setShareToken(null);
     setAnalysisResult(result);
     setCurrentPage("result");
   };
@@ -141,9 +170,17 @@ function App() {
             <Result
               url={targetUrl}
               result={analysisResult}
+              shareToken={shareToken}
+              onResultChange={setAnalysisResult}
             />
           )}
 
+          {currentPage === "shared-error" && (
+            <section className="shared-error">
+              <h2>결과를 열 수 없습니다</h2>
+              <p>{shareError}</p>
+            </section>
+          )}
           {currentPage === "history" && (
             <History
               onViewResult={handleViewHistory}
