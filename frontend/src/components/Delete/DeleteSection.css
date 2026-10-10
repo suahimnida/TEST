@@ -136,3 +136,29 @@
     align-items: flex-start;
   }
 }
+
+/* 성명·식별 암호 두 칸 */
+.delete-field {
+  display: block;
+  margin-top: 14px;
+}
+
+.delete-field > span {
+  display: block;
+  color: #c9d1ce;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.delete-field input {
+  margin-top: 6px !important;
+}
+
+/* 눈 아이콘이 입력란 가운데에 오도록 여백은 감싼 영역에 준다 */
+.delete-field .password-input {
+  margin-top: 6px;
+}
+
+.delete-field .password-input input {
+  margin-top: 0 !important;
+}

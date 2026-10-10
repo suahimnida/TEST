@@ -196,12 +196,12 @@ export function shareUrl(token) {
   return `${window.location.origin}/?share=${encodeURIComponent(token)}`;
 }
 
-// 분석 결과 삭제 1단계: 분석할 때 입력한 사용자 식별 암호 확인
-export async function verifyOwner(analysisId, secret) {
+// 분석 결과 삭제 1단계: 분석할 때 입력한 성명과 사용자 식별 암호 확인
+export async function verifyOwner(analysisId, name, secret) {
   const response = await fetch(`${API_BASE_URL}/api/v1/analyses/${analysisId}/verify-owner`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ secret }),
+    body: JSON.stringify({ name, secret }),
   });
   if (!response.ok) {
     const error = new Error(`본인 확인 실패: ${response.status}`);
@@ -211,12 +211,12 @@ export async function verifyOwner(analysisId, secret) {
   return response.json();
 }
 
-// 분석 결과 삭제 2단계: 서버가 식별 암호와 확인 문구를 다시 검사한 뒤 삭제한다
-export async function deleteAnalysis(analysisId, secret, confirmText) {
+// 분석 결과 삭제 2단계: 서버가 성명·식별 암호와 확인 문구를 다시 검사한 뒤 삭제한다
+export async function deleteAnalysis(analysisId, name, secret, confirmText) {
   const response = await fetch(`${API_BASE_URL}/api/v1/analyses/${analysisId}/delete`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ secret, confirm_text: confirmText }),
+    body: JSON.stringify({ name, secret, confirm_text: confirmText }),
   });
   if (!response.ok) {
     const error = new Error(`분석 결과 삭제 실패: ${response.status}`);

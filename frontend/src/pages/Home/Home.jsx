@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getSavedClientId, listMyAnalyses } from "../../services/api";
+import PasswordInput from "../../components/PasswordInput/PasswordInput";
 import "./Home.css";
 
 function Home({ onAnalyze, onOpenHistory }) {
@@ -34,8 +35,8 @@ function Home({ onAnalyze, onOpenHistory }) {
   }, []);
 
   const nameError = !ownerName.trim() ? "성명을 입력해 주십시오." : "";
-  const secretError = !/^[A-Za-z0-9]{12}$/.test(ownerSecret)
-    ? "영어(대·소문자)와 숫자로 이루어진 12자리를 입력해 주십시오."
+  const secretError = !/^[A-Za-z0-9]{8,12}$/.test(ownerSecret)
+    ? "영어(대·소문자)와 숫자로 이루어진 8~12자리를 입력해 주십시오."
     : "";
 
   const handleSubmit = () => {
@@ -95,19 +96,18 @@ function Home({ onAnalyze, onOpenHistory }) {
 
           <label className="owner-field">
             <span>사용자 식별 암호</span>
-            <input
-              type="password"
+            <PasswordInput
               value={ownerSecret}
               onChange={(event) => setOwnerSecret(event.target.value)}
               maxLength={12}
-              placeholder="영어와 숫자로 이루어진 개인 식별 암호를 12자리로 입력하여 주십시오"
+              placeholder="영어와 숫자로 이루어진 개인 식별 암호를 8~12자리로 입력하여 주십시오"
               autoComplete="new-password"
             />
             {showErrors && secretError ? (
               <small className="field-error">{secretError}</small>
             ) : (
               <small className="field-help">
-                {ownerSecret.length}/12 · 분석 결과를 삭제할 때 본인 확인에 쓰여요. 꼭 기억해 두세요.
+                {ownerSecret.length}자 (8~12자리) · 분석 결과를 삭제할 때 본인 확인에 쓰여요. 꼭 기억해 두세요.
               </small>
             )}
           </label>
