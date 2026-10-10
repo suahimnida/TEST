@@ -22,6 +22,10 @@ const detectionLabels = {
     title: "페이지 콘텐츠",
     description: "텍스트 및 이미지 콘텐츠 분석",
   },
+  reputation: {
+    title: "평판 신호",
+    description: "도메인 등록일, 인증서 첫 발급일, 호스팅 정보 (참고 근거)",
+  },
 };
 
 const detectionStatusLabels = {
