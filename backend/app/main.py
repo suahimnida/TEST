@@ -5,6 +5,7 @@
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 import os
 import uuid
 from contextlib import asynccontextmanager
@@ -37,6 +38,7 @@ from app.schemas import (
 from app.services import (
     allowlist,
     blacklist,
+    reputation,
     detections,
     followup,
     model,
@@ -96,10 +98,15 @@ def create_client():
     return ClientResponse(client_id=str(uuid.uuid4()))
 
 
+# 평판 신호(외부 조회)를 RAG·ML과 동시에 실행하기 위한 작업자
+_background = ThreadPoolExecutor(max_workers=4)
+
+
 @app.post("/api/v1/analyses", response_model=AnalysisResponse)
 def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = Header(None)):
     blacklist_result = blacklist.check_blacklist(request.url)
     allowlist_result = allowlist.check(request.url)
+    reputation_job = _background.submit(reputation.lookup, request.url) if reputation.enabled() else None
     # 블랙리스트에 있으면 피싱으로 확정되므로 RAG/ML은 돌리지 않는다 (팀 합의)
     if blacklist_result.matched:
         rag_result = rag.RagResult()
@@ -114,6 +121,11 @@ def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = He
     except Exception:
         logger.exception("탐지 결과 생성 실패: %s", request.url)
         detection_result = Detections()
+    if reputation_job is not None:
+        try:
+            detection_result.reputation = reputation.to_detection(reputation_job.result(timeout=10))
+        except Exception:
+            logger.exception("평판 신호 조회 실패: %s", request.url)
 
     result = AnalysisResponse(
         id=str(uuid.uuid4()),

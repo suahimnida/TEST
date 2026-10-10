@@ -49,6 +49,7 @@ class Detections(BaseModel):
     domain: dict | None = None
     html: dict | None = None
     image: dict | None = None
+    reputation: dict | None = None  # 평판 신호 (참고 근거, 점수 미반영)
 
 
 class AiAnalysis(BaseModel):

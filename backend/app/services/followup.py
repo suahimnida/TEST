@@ -133,6 +133,7 @@ DETECTION_KO = {
     "domain": "도메인 분석",
     "html": "HTML 분석",
     "image": "페이지 콘텐츠",
+    "reputation": "평판 신호",
 }
 VERDICT_KO = {"phishing": "피싱", "suspicious": "의심", "normal": "정상"}
 

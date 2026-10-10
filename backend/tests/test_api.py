@@ -26,7 +26,8 @@ def test_create_analysis_returns_stub(monkeypatch):
     assert body["url"] == "https://example.com"
     for key in ["verdict", "confidence", "risk_score", "risk_level"]:
         assert body[key] is None
-    assert set(body["detections"]) == {"url", "url_stats", "domain", "html", "image"}
+    assert set(body["detections"]) == {"url", "url_stats", "domain", "html", "image", "reputation"}
+    assert body["detections"]["reputation"] is None  # 테스트에서는 외부 조회를 끈다
     assert body["detections"]["url"]["status"] == "normal"
     assert body["detections"]["html"]["status"] == "not_analyzed"
     assert body["ai_analysis"] == {"summary": None, "reasons": []}

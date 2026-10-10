@@ -6,6 +6,12 @@ from app import db
 
 
 @pytest.fixture(autouse=True)
+def no_network_reputation(monkeypatch):
+    """테스트에서는 평판 신호 외부 조회를 하지 않는다 (test_reputation.py는 가짜 응답으로 따로 확인)."""
+    monkeypatch.setenv("REPUTATION_ENABLED", "0")
+
+
+@pytest.fixture(autouse=True)
 def no_real_llm(monkeypatch):
     from app import main
 
