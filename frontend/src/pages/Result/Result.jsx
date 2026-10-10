@@ -1,3 +1,4 @@
+import ModelExplanation from "../../components/Explanation/ModelExplanation";
 import ReportSection from "../../components/Report/ReportSection";
 import "./Result.css";
 
@@ -190,6 +191,12 @@ function Result({ url, result }) {
           </p>
         </div>
       </div>
+
+      {/* 판단 근거 수치: 모델이 URL의 어느 부분 때문에 위험하다고 봤는지 */}
+      <ModelExplanation
+        explanation={data.explanation}
+        allowlisted={Boolean(data.allowlist?.matched)}
+      />
 
       {/* Blacklist */}
       <div className="result-section">
