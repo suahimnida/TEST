@@ -29,16 +29,18 @@ class AnalysisRequest(BaseModel):
     @field_validator("owner_secret")
     @classmethod
     def secret_format(cls, v: str | None) -> str | None:
-        if v is not None and not re.fullmatch(r"[A-Za-z0-9]{12}", v):
-            raise ValueError("사용자 식별 암호는 영문 대소문자와 숫자 12자리여야 합니다.")
+        if v is not None and not re.fullmatch(r"[A-Za-z0-9]{8,12}", v):
+            raise ValueError("사용자 식별 암호는 영문 대소문자와 숫자 8~12자리여야 합니다.")
         return v
 
 
 class OwnerCheckRequest(BaseModel):
+    name: str
     secret: str
 
 
 class DeleteAnalysisRequest(BaseModel):
+    name: str
     secret: str
     confirm_text: str
 

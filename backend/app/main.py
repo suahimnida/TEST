@@ -182,6 +182,7 @@ def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = He
                 result.id,
                 result.owner_name,
                 owner.hash_secret(request.owner_secret) if request.owner_secret else None,
+                owner.hash_name(request.owner_name) if request.owner_name else None,
             )
     except Exception:
         logger.exception("분석 기록 저장 실패: %s", request.url)
@@ -252,22 +253,25 @@ def delete_share_link(analysis_id: str, x_client_id: uuid.UUID | None = Header(N
     return ShareResponse(token=None)
 
 
-def _check_owner_secret(analysis_id: str, secret: str) -> None:
-    """식별 암호로 본인을 확인한다. 공개 결과만 대상이다 (비공개 결과 삭제는 아직 지원하지 않음)."""
-    stored = db.get_owner_secret(analysis_id)
+def _check_owner(analysis_id: str, name: str, secret: str) -> None:
+    """성명과 식별 암호로 본인을 확인한다. 공개 결과만 대상이다 (비공개 결과 삭제는 아직 지원하지 않음).
+    어느 쪽이 틀렸는지는 알려 주지 않는다 (추측을 돕지 않도록)."""
+    stored = db.get_owner(analysis_id)
     if stored is None:
         raise HTTPException(status_code=404, detail="삭제할 수 있는 분석 결과가 없습니다.")
     if owner.locked(analysis_id):
-        raise HTTPException(status_code=429, detail="식별 암호를 여러 번 틀려 잠시 후 다시 시도해야 합니다.")
-    if not owner.verify_secret(secret, stored):
+        raise HTTPException(status_code=429, detail="여러 번 틀려 잠시 후 다시 시도해야 합니다.")
+    name_ok = owner.verify_name(name, stored["name_hash"], stored["masked_name"])
+    secret_ok = owner.verify_secret(secret, stored["secret_hash"])
+    if not (name_ok and secret_ok):
         owner.record_failure(analysis_id)
-        raise HTTPException(status_code=403, detail="사용자 식별 암호가 일치하지 않습니다.")
+        raise HTTPException(status_code=403, detail="성명 또는 사용자 식별 암호가 일치하지 않습니다.")
 
 
 @app.post("/api/v1/analyses/{analysis_id}/verify-owner")
 def verify_owner(analysis_id: str, request: OwnerCheckRequest):
-    """삭제 1단계: 분석할 때 입력한 사용자 식별 암호가 맞는지 확인한다."""
-    _check_owner_secret(analysis_id, request.secret)
+    """삭제 1단계: 분석할 때 입력한 성명과 사용자 식별 암호가 맞는지 확인한다."""
+    _check_owner(analysis_id, request.name, request.secret)
     return {"ok": True}
 
 
@@ -275,7 +279,7 @@ def verify_owner(analysis_id: str, request: OwnerCheckRequest):
 def delete_analysis(analysis_id: str, request: DeleteAnalysisRequest):
     """삭제 2단계: 식별 암호와 확인 문구를 다시 검사한 뒤 분석 결과를 지운다.
     1단계를 건너뛰고 이 주소만 호출해도 같은 검사를 거친다."""
-    _check_owner_secret(analysis_id, request.secret)
+    _check_owner(analysis_id, request.name, request.secret)
     if request.confirm_text.strip() != owner.CONFIRM_TEXT:
         raise HTTPException(status_code=400, detail=f"'{owner.CONFIRM_TEXT}'를 정확히 입력해야 합니다.")
     db.delete_analysis(analysis_id)

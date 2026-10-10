@@ -94,6 +94,15 @@ def init_db() -> None:
             )
             """
         )
+        # 삭제할 때 성명을 확인하려고 성명 해시 칸을 추가한다. 이미 만들어진 DB에도 서버 시작 때 자동으로 추가된다
+        columns = (
+            {r["name"] for r in conn.execute("PRAGMA table_info(owners)").fetchall()}
+            if not _database_url()
+            else {r["column_name"] for r in conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'owners'").fetchall()}
+        )
+        if "name_hash" not in columns:
+            conn.execute("ALTER TABLE owners ADD COLUMN name_hash TEXT")
         # 비공개 결과의 공유 링크. 분석 1건당 링크 1개, 공유를 중지하면 행을 지운다
         conn.execute(
             """
@@ -281,23 +290,24 @@ def list_analyses(limit: int, client_id: str | None = None) -> list[AnalysisSumm
     ]
 
 
-def save_owner(analysis_id: str, masked_name: str | None, secret_hash: str | None) -> None:
+def save_owner(analysis_id: str, masked_name: str | None, secret_hash: str | None, name_hash: str | None = None) -> None:
     with _connect() as (conn, p):
         conn.execute(
-            f"INSERT INTO owners (analysis_id, masked_name, secret_hash) VALUES ({p}, {p}, {p})",
-            (analysis_id, masked_name, secret_hash),
+            f"INSERT INTO owners (analysis_id, masked_name, secret_hash, name_hash) VALUES ({p}, {p}, {p}, {p})",
+            (analysis_id, masked_name, secret_hash, name_hash),
         )
 
 
-def get_owner_secret(analysis_id: str) -> str | None:
-    """공개 결과의 식별 암호 해시. 공개가 아니거나 없으면 None (비공개 결과 삭제는 아직 지원하지 않음)."""
+def get_owner(analysis_id: str) -> dict | None:
+    """공개 결과의 요청자 확인 정보 (가린 성명, 성명 해시, 식별 암호 해시).
+    공개가 아니거나 식별 암호가 없으면 None (비공개 결과 삭제는 아직 지원하지 않음)."""
     with _connect() as (conn, p):
         row = conn.execute(
-            f"SELECT o.secret_hash FROM owners o JOIN analyses a ON a.id = o.analysis_id "
-            f"WHERE o.analysis_id = {p} AND a.is_public = 1",
+            f"SELECT o.masked_name, o.name_hash, o.secret_hash FROM owners o JOIN analyses a ON a.id = o.analysis_id "
+            f"WHERE o.analysis_id = {p} AND a.is_public = 1 AND o.secret_hash IS NOT NULL",
             (analysis_id,),
         ).fetchone()
-    return row["secret_hash"] if row else None
+    return dict(row) if row else None
 
 
 def delete_analysis(analysis_id: str) -> None:
