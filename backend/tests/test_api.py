@@ -26,10 +26,9 @@ def test_create_analysis_returns_stub(monkeypatch):
     assert body["url"] == "https://example.com"
     for key in ["verdict", "confidence", "risk_score", "risk_level"]:
         assert body[key] is None
-    assert set(body["detections"]) == {"url", "url_stats", "domain", "html", "image", "reputation"}
+    assert set(body["detections"]) == {"url", "url_stats", "domain", "reputation"}
     assert body["detections"]["reputation"] is None  # 테스트에서는 외부 조회를 끈다
     assert body["detections"]["url"]["status"] == "normal"
-    assert body["detections"]["html"] is None and body["detections"]["image"] is None
     # 판정이 없어도 예방 가이드를 찾아 템플릿 설명을 만든다
     assert body["ai_analysis"]["written_by"] == "template"
     assert body["ai_analysis"]["guides"][0]["key"] == "official_path"
@@ -75,6 +74,7 @@ def test_blacklist_match_skips_rag_and_model(monkeypatch):
 
 
 def test_ml_rag_llm_roles(monkeypatch):
+    """ML 근거 → RAG 가이드 → LLM 설명 순서로 채워지고, 설명은 근거·가이드 번호만 쓴다."""
     fake = rag.RagResult(
         features={"url_length": 20},
         similar_cases=[{"url": "http://evil.tk", "label": 1, "similarity": 0.91}],

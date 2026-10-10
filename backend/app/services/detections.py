@@ -62,6 +62,7 @@ _EMBEDDED_DOMAIN = re.compile(r"/(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|
 
 
 def _path_patterns(path: str, registered: str) -> list[str]:
+    """접속 없이 경로만 보고 찾는 해킹 사이트 피싱 페이지 형태."""
     reasons = []
     lower = path.lower()
     tokens = set(re.split(r"[^a-z0-9]+", lower))  # 'accounting'이 'account'로 잡히지 않도록 단어 단위로 비교
@@ -173,7 +174,7 @@ def _analyze_domain(url: str, host: str, feats: dict, registered: str) -> dict:
     if url.strip().lower().startswith("http://"):
         notes.append("HTTPS가 아닌 HTTP 주소입니다. 입력한 정보가 암호화되지 않을 수 있습니다.")
     notes.append(f"등록 도메인: {registered}")
-    notes.append("인증서 기록은 평판 신호에서 확인합니다. 리디렉션은 사이트에 접속해야 알 수 있어 확인하지 않았습니다.")
+    notes.append("인증서 기록은 평판 신호에서 확인합니다.")
     return _result(reasons, notes)
 
 
@@ -183,8 +184,6 @@ def analyze(url: str) -> dict:
     registered = host if feats["is_ip_domain"] else _registered_domain(host)
     official = any(registered in o for o in OFFICIAL_DOMAINS.values())
 
-    # 페이지 내용(HTML·이미지)은 사이트에 접속해야 알 수 있어 분석하지 않는다. 그런 항목을 "분석되지 않음"으로
-    # 늘 보여 주면 분석하는 것처럼 보이므로 아예 보내지 않고, 결과 화면 맨 위의 분석 범위 안내에서 밝힌다
     return {
         "url": _analyze_url(url, host, feats, registered, official),
         "url_stats": _analyze_url_stats(host, feats),

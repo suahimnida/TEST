@@ -47,13 +47,11 @@ class Detections(BaseModel):
     url: dict | None = None
     url_stats: dict | None = None
     domain: dict | None = None
-    # 페이지 내용(HTML·이미지)은 분석하지 않아 새 결과에서는 항상 비어 있다. 예전 기록과 호환하려고 남겨 둔다
-    html: dict | None = None
-    image: dict | None = None
     reputation: dict | None = None  # 평판 신호 (참고 근거, 점수 미반영)
 
 
 class AiAnalysis(BaseModel):
+    """출처가 있는 설명. 문장 끝의 [E1]은 evidence, [G1]은 guides의 항목을 가리킨다."""
 
     summary: str | None = None
     reasons: list[str] = []
@@ -63,6 +61,7 @@ class AiAnalysis(BaseModel):
 
 
 class AllowlistResult(BaseModel):
+    """공식 도메인 허용 목록 일치 여부. 일치하면 ML 점수만으로 피싱 판정을 내리지 않는다."""
 
     matched: bool = False
     domain: str | None = None

@@ -45,8 +45,7 @@ def test_userinfo_is_not_part_of_domain():
     assert any("evil.com" in note for note in result["domain"]["notes"])
 
 
-def test_page_content_is_not_reported():
-    # 사이트에 접속하지 않으므로 HTML·이미지 항목을 만들지 않는다
+def test_detection_items():
     assert set(detections.analyze("https://example.com")) == {"url", "url_stats", "domain"}
 
 
