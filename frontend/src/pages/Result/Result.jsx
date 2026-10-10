@@ -1,3 +1,4 @@
+import GroundedAnalysis from "../../components/Grounded/GroundedAnalysis";
 import ModelExplanation from "../../components/Explanation/ModelExplanation";
 import ReportSection from "../../components/Report/ReportSection";
 import "./Result.css";
@@ -451,102 +452,8 @@ function Result({ url, result }) {
         </div>
       </div>
 
-      {/* RAG Evidence */}
-      <div className="result-section">
-        <div className="section-heading">
-          <div>
-            <p>보안 근거</p>
-          </div>
-
-          <span>RAG</span>
-        </div>
-
-        <div className="assistant-card">
-          {data.rag?.matched ? (
-            <>
-              <div className="finding">
-                <div className="finding-icon normal">
-                  R
-                </div>
-
-                <div>
-                  <h4>관련 보안 자료 확인</h4>
-
-                  <p>
-                    {data.rag.evidence ||
-                      "관련 보안 문서의 근거가 확인되었습니다."}
-                  </p>
-                </div>
-              </div>
-
-              {data.rag.source?.length > 0 && (
-                <div className="finding">
-                  <div className="finding-icon normal">
-                    ✓
-                  </div>
-
-                  <div>
-                    <h4>참고 자료</h4>
-
-                    {data.rag.source.map(
-                      (source, index) => (
-                        <p key={index}>
-                          {source}
-                        </p>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <p>
-              관련 RAG 근거가 없습니다.
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* AI Analysis */}
-      <div className="result-section">
-        <div className="section-heading">
-          <div>
-            <p>AI 분석</p>
-          </div>
-
-          <span>AI Agent</span>
-        </div>
-
-        <div className="ai-analysis-card">
-          <div className="ai-badge">
-            AI
-          </div>
-
-          <div>
-            <h3>분석 결과 설명</h3>
-
-            <p className="ai-summary">
-              {data.ai_analysis?.summary ||
-                "AI 분석 설명이 아직 제공되지 않았습니다."}
-            </p>
-
-            {data.ai_analysis?.reasons?.length >
-              0 && (
-              <div className="ai-reasons">
-                {data.ai_analysis.reasons.map(
-                  (reason, index) => (
-                    <div key={index}>
-                      <span>✓</span>
-
-                      <p>{reason}</p>
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* ② RAG 대응 가이드 + ③ LLM 출처 있는 설명 (① ML 근거는 위 "판단 근거 수치") */}
+      <GroundedAnalysis ai={data.ai_analysis} rag={data.rag} />
 
       {/* Model */}
       <div className="result-section">

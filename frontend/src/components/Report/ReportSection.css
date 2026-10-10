@@ -309,3 +309,15 @@
     flex-direction: column;
   }
 }
+
+.report-source {
+  margin-top: 4px;
+  color: #8b9491;
+  font-size: 11px;
+}
+
+.report-source a,
+.report-limitations a {
+  color: #42e8c4;
+  text-decoration: none;
+}

@@ -296,6 +296,23 @@ function ReportSection({ analysisId }) {
             <p>
               {report.ai_analysis || "AI 분석 설명이 제공되지 않았습니다."}
             </p>
+            {(report.ai_evidence?.length > 0 || report.ai_guides?.length > 0) && (
+              <ul className="report-limitations">
+                {report.ai_evidence?.map((e) => (
+                  <li key={e.id}>
+                    [{e.id}] {e.source}: {e.text}
+                  </li>
+                ))}
+                {report.ai_guides?.map((g) => (
+                  <li key={g.id}>
+                    [{g.id}] {g.title} -{" "}
+                    <a href={g.url} target="_blank" rel="noopener noreferrer">
+                      {g.source}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className="report-block">
@@ -338,6 +355,15 @@ function ReportSection({ analysisId }) {
 
                       {action.note && (
                         <p className="report-note">{action.note}</p>
+                      )}
+
+                      {action.source && (
+                        <p className="report-source">
+                          출처:{" "}
+                          <a href={action.source_url} target="_blank" rel="noopener noreferrer">
+                            {action.source}
+                          </a>
+                        </p>
                       )}
 
                       <ul>
