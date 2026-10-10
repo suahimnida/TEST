@@ -1,3 +1,4 @@
+import DeleteSection from "../../components/Delete/DeleteSection";
 import ShareControls from "../../components/Share/ShareControls";
 import GroundedAnalysis from "../../components/Grounded/GroundedAnalysis";
 import ModelExplanation from "../../components/Explanation/ModelExplanation";
@@ -53,7 +54,7 @@ const matchTypeLabels = {
   host: "도메인 일치",
 };
 
-function Result({ url, result, shareToken, onResultChange }) {
+function Result({ url, result, shareToken, onResultChange, onDeleted }) {
   if (!result) {
     return (
       <section className="result-page">
@@ -578,6 +579,9 @@ function Result({ url, result, shareToken, onResultChange }) {
 
       {/* Report: 리포트 생성, PDF 보기·저장. 다른 분석 결과로 바뀌면 key로 상태를 초기화한다 */}
       {data.id && <ReportSection key={data.id} analysisId={data.id} shareToken={shareToken} />}
+
+      {/* 분석 결과 삭제: 공개 결과만. 분석할 때 입력한 사용자 식별 암호로 본인을 확인한다 */}
+      {data.id && data.is_public && <DeleteSection analysisId={data.id} onDeleted={onDeleted} />}
     </section>
   );
 }

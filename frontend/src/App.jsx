@@ -14,10 +14,27 @@ function App() {
   const [currentPage, setCurrentPage] = useState("home");
   const [targetUrl, setTargetUrl] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+  const [owner, setOwner] = useState({ name: null, secret: null });
   const [analysisResult, setAnalysisResult] = useState(null);
   // 공유 링크(?share=토큰)로 들어온 경우의 토큰. 리포트를 볼 때도 함께 보낸다
   const [shareToken, setShareToken] = useState(null);
   const [shareError, setShareError] = useState("");
+  // 분석 결과를 삭제한 뒤 분석 기록 화면에 보여 줄 안내
+  const [historyNotice, setHistoryNotice] = useState("");
+  const [historyTab, setHistoryTab] = useState("mine");
+
+  const handleDeleted = () => {
+    setAnalysisResult(null);
+    setHistoryNotice("분석 결과를 삭제했습니다.");
+    setHistoryTab("public");
+    setCurrentPage("history");
+  };
+
+  const openHistory = () => {
+    setHistoryNotice("");
+    setHistoryTab("mine");
+    setCurrentPage("history");
+  };
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get("share");
@@ -42,14 +59,17 @@ function App() {
     }
   }, [currentPage]);
 
-  const handleAnalyze = (url, publicStatus) => {
+  const handleAnalyze = (url, publicStatus, ownerName = null, ownerSecret = null) => {
     setTargetUrl(url);
     setIsPublic(publicStatus);
+    setOwner({ name: ownerName, secret: ownerSecret });
     setShareToken(null);
     setCurrentPage("analysis");
   };
 
   const handleAnalysisComplete = (result) => {
+    // 식별 암호는 서버에 보낸 뒤 화면 메모리에 남기지 않는다
+    setOwner({ name: null, secret: null });
     setAnalysisResult(result);
     setCurrentPage("result");
   };
@@ -94,7 +114,7 @@ function App() {
               className={`sidebar-item ${
                 currentPage === "history" ? "active" : ""
               }`}
-              onClick={() => setCurrentPage("history")}
+              onClick={openHistory}
             >
               <span>◷</span>
               분석 기록
@@ -152,9 +172,7 @@ function App() {
           {currentPage === "home" && (
             <Home
               onAnalyze={handleAnalyze}
-              onOpenHistory={() =>
-                setCurrentPage("history")
-              }
+              onOpenHistory={openHistory}
             />
           )}
 
@@ -162,6 +180,8 @@ function App() {
             <Analysis
               url={targetUrl}
               isPublic={isPublic}
+              ownerName={owner.name}
+              ownerSecret={owner.secret}
               onComplete={handleAnalysisComplete}
             />
           )}
@@ -172,6 +192,7 @@ function App() {
               result={analysisResult}
               shareToken={shareToken}
               onResultChange={setAnalysisResult}
+              onDeleted={handleDeleted}
             />
           )}
 
@@ -183,6 +204,9 @@ function App() {
           )}
           {currentPage === "history" && (
             <History
+              key={`${historyTab}-${historyNotice}`}
+              initialTab={historyTab}
+              notice={historyNotice}
               onViewResult={handleViewHistory}
             />
           )}

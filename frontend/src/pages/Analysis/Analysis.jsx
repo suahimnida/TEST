@@ -26,7 +26,7 @@ const analysisSteps = [
   },
 ];
 
-function Analysis({ url, isPublic, onComplete }) {
+function Analysis({ url, isPublic, ownerName, ownerSecret, onComplete }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [error, setError] = useState("");
 
@@ -38,7 +38,7 @@ function Analysis({ url, isPublic, onComplete }) {
         setError("");
         setCurrentStep(0);
 
-        const result = await analyzeUrl(url, isPublic);
+        const result = await analyzeUrl(url, isPublic, ownerName, ownerSecret);
 
         if (!cancelled) {
           onComplete(result);
@@ -59,7 +59,7 @@ function Analysis({ url, isPublic, onComplete }) {
     return () => {
       cancelled = true;
     };
-  }, [url, isPublic, onComplete]);
+  }, [url, isPublic, ownerName, ownerSecret, onComplete]);
 
   useEffect(() => {
     if (error) {

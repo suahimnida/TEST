@@ -3,11 +3,11 @@ import "./History.css";
 
 import { getAnalysis, listMyAnalyses, listPublicAnalyses } from "../../services/api";
 
-function History({ onViewResult }) {
+function History({ onViewResult, initialTab = "mine", notice = "" }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   // mine: 이 브라우저의 기록 / public: 다른 사용자가 공개한 결과
-  const [tab, setTab] = useState("mine");
+  const [tab, setTab] = useState(initialTab);
 
   useEffect(() => {
     const loadHistory = async () => {
@@ -146,6 +146,8 @@ function History({ onViewResult }) {
 
       {tabs}
 
+      {notice && <p className="history-notice">{notice}</p>}
+
       {/* Empty */}
       {history.length === 0 ? (
         <div className="history-empty">
@@ -184,6 +186,9 @@ function History({ onViewResult }) {
                     <span className="history-date">
                       {formatDate(item.created_at)}
                     </span>
+                    {tab === "public" && item.owner_name && (
+                      <span className="history-owner">{item.owner_name}</span>
+                    )}
                   </div>
 
                   {/* URL */}

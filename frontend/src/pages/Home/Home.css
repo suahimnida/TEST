@@ -245,3 +245,58 @@
     grid-template-columns: 1fr;
   }
 }
+/* 성명·사용자 식별 암호 */
+.owner-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.owner-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.owner-field > span {
+  color: #c9d1ce;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.owner-field input {
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid #292e2f;
+  border-radius: 10px;
+  background: #0b0d0e;
+  color: #f2f5f4;
+  font-size: 14px;
+  outline: none;
+}
+
+.owner-field input::placeholder {
+  color: #5f6967;
+  font-size: 13px;
+}
+
+.owner-field input:focus {
+  border-color: #42e8c4;
+}
+
+.field-help {
+  color: #687270;
+  font-size: 11px;
+}
+
+.field-error {
+  color: #ff7b85;
+  font-size: 11px;
+}
+
+@media (max-width: 800px) {
+  .owner-fields {
+    grid-template-columns: 1fr;
+  }
+}

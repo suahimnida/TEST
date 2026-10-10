@@ -437,3 +437,20 @@
   background: #42e8c4;
   color: #0a0c0d;
 }
+
+/* 공개 분석에 표시하는 가린 성명 */
+.history-owner {
+  color: #c9d1ce;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.history-notice {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-left: 3px solid #42e8c4;
+  border-radius: 6px;
+  background: rgba(66, 232, 196, 0.06);
+  color: #c9d1ce;
+  font-size: 13px;
+}

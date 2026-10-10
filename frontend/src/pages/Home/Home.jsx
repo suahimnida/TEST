@@ -5,6 +5,10 @@ import "./Home.css";
 function Home({ onAnalyze, onOpenHistory }) {
   const [url, setUrl] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+  // 분석 요청자 확인용: 공개 분석에 가린 성명으로 표시하고, 결과를 삭제할 때 식별 암호로 본인을 확인한다
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerSecret, setOwnerSecret] = useState("");
+  const [showErrors, setShowErrors] = useState(false);
   const [recentHistory, setRecentHistory] = useState([]);
 
   useEffect(() => {
@@ -29,6 +33,11 @@ function Home({ onAnalyze, onOpenHistory }) {
     fetchRecentHistory();
   }, []);
 
+  const nameError = !ownerName.trim() ? "성명을 입력해 주십시오." : "";
+  const secretError = !/^[A-Za-z0-9]{12}$/.test(ownerSecret)
+    ? "영어(대·소문자)와 숫자로 이루어진 12자리를 입력해 주십시오."
+    : "";
+
   const handleSubmit = () => {
     const trimmedUrl = url.trim();
 
@@ -36,7 +45,12 @@ function Home({ onAnalyze, onOpenHistory }) {
       return;
     }
 
-    onAnalyze(trimmedUrl, isPublic);
+    if (nameError || secretError) {
+      setShowErrors(true);
+      return;
+    }
+
+    onAnalyze(trimmedUrl, isPublic, ownerName.trim(), ownerSecret);
   };
 
   const handleKeyDown = (event) => {
@@ -64,6 +78,40 @@ function Home({ onAnalyze, onOpenHistory }) {
 
       <div className="url-card">
         <div className="url-card-label">URL 분석</div>
+
+        <div className="owner-fields">
+          <label className="owner-field">
+            <span>성명</span>
+            <input
+              type="text"
+              value={ownerName}
+              onChange={(event) => setOwnerName(event.target.value)}
+              maxLength={30}
+              placeholder="성명을 입력하여 주십시오"
+              autoComplete="name"
+            />
+            {showErrors && nameError && <small className="field-error">{nameError}</small>}
+          </label>
+
+          <label className="owner-field">
+            <span>사용자 식별 암호</span>
+            <input
+              type="password"
+              value={ownerSecret}
+              onChange={(event) => setOwnerSecret(event.target.value)}
+              maxLength={12}
+              placeholder="영어와 숫자로 이루어진 개인 식별 암호를 12자리로 입력하여 주십시오"
+              autoComplete="new-password"
+            />
+            {showErrors && secretError ? (
+              <small className="field-error">{secretError}</small>
+            ) : (
+              <small className="field-help">
+                {ownerSecret.length}/12 · 분석 결과를 삭제할 때 본인 확인에 쓰여요. 꼭 기억해 두세요.
+              </small>
+            )}
+          </label>
+        </div>
 
         <div className="url-input-row">
           <input
