@@ -56,6 +56,13 @@ class AiAnalysis(BaseModel):
     reasons: list[str] = []
 
 
+class AllowlistResult(BaseModel):
+    """공식 도메인 허용 목록 일치 여부. 일치하면 ML 점수만으로 피싱 판정을 내리지 않는다."""
+
+    matched: bool = False
+    domain: str | None = None
+
+
 class AnalysisResponse(BaseModel):
     id: str
     status: Literal["completed", "failed"]
@@ -69,7 +76,8 @@ class AnalysisResponse(BaseModel):
     ai_analysis: AiAnalysis = AiAnalysis()
     extracted_features: dict = {}
     similar_cases: list[SimilarCase] = []
-    blacklist: BlacklistResult 
+    blacklist: BlacklistResult
+    allowlist: AllowlistResult = AllowlistResult() 
     rag: RagReference = RagReference() 
     model: ModelResult 
 

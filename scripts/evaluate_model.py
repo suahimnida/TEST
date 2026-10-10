@@ -1,8 +1,9 @@
 """ML 모델 평가: 오탐률·미탐률, 형태별 결과, 오답 분석.
 
 실행:
-    python scripts/evaluate_model.py              외부 평가 세트 (evaluation/eval_set.csv)
-    python scripts/evaluate_model.py --internal   학습 때와 같은 방식으로 나눈 내부 평가 세트도 함께
+    python scripts/evaluate_model.py              서비스 모델(v2) 외부 평가
+    python scripts/evaluate_model.py --model v1   기존 랜덤 포레스트 모델 외부 평가
+    python scripts/evaluate_model.py --internal   기존 PhiUSIIL 내부 평가 세트도 함께
 
 출력: evaluation/results/ (metrics.json, summary.md, false_positives.csv, false_negatives.csv)
 """
@@ -47,7 +48,10 @@ def check_environment():
         )
 
 
-def load_model():
+def load_model(version="v1"):
+    if version == "v2":
+        report = json.loads((ML / "models" / "url_model_v2_report.json").read_text(encoding="utf-8"))
+        return {"model": joblib.load(ML / "models" / "url_model_v2.joblib"), "report": report}, None
     model = joblib.load(ML / "models" / "best_model.joblib")
     columns = json.loads((ML / "models" / "feature_columns.json").read_text(encoding="utf-8"))
     return model, columns
@@ -55,7 +59,14 @@ def load_model():
 
 def score(urls, model, columns) -> pd.DataFrame:
     feats = pd.DataFrame([extract_features(u) for u in urls])
-    feats["score"] = model.predict_proba(feats[columns])[:, 1] * 100
+    if columns is None:  # v2: 원문 URL을 받는 파이프라인 + 기준점 보정
+        from url_features import calibrate
+
+        raw = model["model"].predict_proba(list(urls))[:, 1] * 100
+        t = model["report"]["thresholds"]
+        feats["score"] = [calibrate(v, t["suspicious"], t["phishing"]) for v in raw]
+    else:
+        feats["score"] = model.predict_proba(feats[columns])[:, 1] * 100
     if feats["score"].min() < 0 or feats["score"].max() > 100:
         sys.exit("[중단] 모델 점수가 0~100 범위를 벗어났습니다. scikit-learn 버전을 확인하세요.")
     return feats
@@ -158,16 +169,29 @@ def main():
     parser = argparse.ArgumentParser(description="ML 모델 평가")
     parser.add_argument("--eval-set", type=Path, default=EVAL / "eval_set.csv")
     parser.add_argument("--internal", action="store_true", help="내부 평가 세트도 계산 (몇 분 걸림)")
+    parser.add_argument("--model", choices=["v1", "v2"], default="v2", help="v2: 서비스 모델, v1: 기존 랜덤 포레스트")
     args = parser.parse_args()
 
     check_environment()
-    model, columns = load_model()
+    model, columns = load_model(args.model)
+    global RESULTS
+    RESULTS = EVAL / "results" / args.model
     data = pd.read_csv(args.eval_set)
     scored = score(data["url"].tolist(), model, columns)
     df = pd.concat([data.reset_index(drop=True), scored.drop(columns=["url"])], axis=1)
     y, s = df["label"].to_numpy(), df["score"].to_numpy()
 
     report = {"외부 평가 세트": {"건수": {"피싱": int(y.sum()), "정상": int((y == 0).sum())}, **metrics(y, s)}}
+    sys.path.insert(0, str(ROOT / "backend"))
+    from app.services import allowlist, verdict
+
+    allowed = np.array([allowlist.check(u).matched for u in df["url"]])
+    system = np.where(allowed, np.minimum(s, verdict.ALLOWLIST_CAP), s)
+    report["서비스 전체 (ML + 허용 목록)"] = metrics(y, system)
+    report["허용 목록 적용 범위"] = {
+        "정상 URL 중 허용 목록 일치": round(float(allowed[y == 0].mean()), 4),
+        "피싱 URL 중 허용 목록 일치": round(float(allowed[y == 1].mean()), 4),
+    }
     rule = shortcut_rule(df["url"])
     report["외부 평가 세트 - 지름길 규칙"] = metrics(y, rule)
     report["모델과 지름길 규칙의 판정 일치율"] = round(float(((s >= 50) == (rule >= 50)).mean()), 4)
@@ -214,12 +238,14 @@ def main():
         "https://www.google.com", "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     ])][["url", "score"]].round(1)
 
-    lines = ["# 모델 평가 결과 (자동 생성)\n", f"평가 세트: 피싱 {int(y.sum())}건, 정상 {int((y == 0).sum())}건\n"]
+    lines = [f"# 모델 평가 결과 (자동 생성, 모델 {args.model})\n", f"평가 세트: 피싱 {int(y.sum())}건, 정상 {int((y == 0).sum())}건\n"]
     for name, m in report.items():
         if isinstance(m, dict) and any(isinstance(v, dict) and "FP" in v for v in m.values()):
             lines += [f"\n## {name}\n", md_table(confusion_rows(m))]
             if "ROC-AUC" in m:
                 lines.append(f"\nROC-AUC {m['ROC-AUC']}, PR-AUC {m['PR-AUC']}\n")
+    cover = report["허용 목록 적용 범위"]
+    lines.append(f"\n허용 목록 일치: 정상 {cover['정상 URL 중 허용 목록 일치']:.1%}, 피싱 {cover['피싱 URL 중 허용 목록 일치']:.1%}\n")
     lines.append(f"\n모델과 지름길 규칙의 판정 일치율: {report['모델과 지름길 규칙의 판정 일치율']:.2%}\n")
     lines.append("(지름길 규칙: https://www.로 시작하고 경로가 없으면 정상, 아니면 피싱. 0점 또는 100점만 내므로 기준과 관계없이 결과가 같다)\n")
     lines += ["\n## 정상 URL 형태별 오탐률 (60점 기준)\n", md_table(legit_slices)]

@@ -1,0 +1,3 @@
+﻿url,label,score,error_type,source,scheme,has_www,has_path,korean,in_train_domain,url_length,host_length,path_length,subdomain_count,suspicious_keyword_count,count_www,count_dash,url_entropy,host_entropy,note
+https://www.ilogenst.com,1,7.28,의심 특징이 거의 없는 짧은 도메인,KISA 2023,https,1,0,1,0,24,16,0,1,0,1,0,3.86,3.45,
+https://www.ilogens.com,1,7.48,의심 특징이 거의 없는 짧은 도메인,KISA 2023,https,1,0,1,0,23,15,0,1,0,1,0,3.88,3.32,

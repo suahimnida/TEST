@@ -35,6 +35,7 @@ from app.schemas import (
     ReportResponse,
 )
 from app.services import (
+    allowlist,
     blacklist,
     detections,
     followup,
@@ -98,6 +99,7 @@ def create_client():
 @app.post("/api/v1/analyses", response_model=AnalysisResponse)
 def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = Header(None)):
     blacklist_result = blacklist.check_blacklist(request.url)
+    allowlist_result = allowlist.check(request.url)
     # 블랙리스트에 있으면 피싱으로 확정되므로 RAG/ML은 돌리지 않는다 (팀 합의)
     if blacklist_result.matched:
         rag_result = rag.RagResult()
@@ -118,12 +120,13 @@ def create_analysis(request: AnalysisRequest, x_client_id: uuid.UUID | None = He
         status="completed",
         url=request.url,
         is_public=request.is_public,
-        **verdict.decide(blacklist_result, model_result),
+        **verdict.decide(blacklist_result, model_result, allowlist_result),
         detections=detection_result,
         ai_analysis=AiAnalysis(summary=rag_result.summary),
         extracted_features=rag_result.features,
         similar_cases=rag_result.similar_cases,
         blacklist=blacklist_result,
+        allowlist=allowlist_result,
         rag=rag_result.reference,
         model=model_result,
     )

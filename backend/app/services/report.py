@@ -99,6 +99,15 @@ def build_evidence(analysis: AnalysisResponse) -> list[ReportEvidence]:
             )
         )
 
+    if analysis.allowlist.matched and not bl.matched:
+        evidence.append(
+            ReportEvidence(
+                source="공식 도메인 허용 목록",
+                finding=f"{analysis.allowlist.domain} 은(는) 많이 쓰이는 공식 도메인 목록에 있어, ML 점수만으로 피싱 판정을 내리지 않았습니다.",
+                used_in_verdict=True,
+            )
+        )
+
     model = analysis.model
     if model.status == "ready" and model.risk_score is not None:
         label = "피싱" if model.label == "phishing" else "정상"

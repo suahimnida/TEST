@@ -30,7 +30,37 @@ def _load_artifacts():
         _load_error = str(e)
 
 
+_v2 = None
+
+
+def _load_v2():
+    """URL 모델 v2 (scripts/train_url_model.py). 파일이 없으면 None이고 기존 모델을 쓴다."""
+    global _v2
+    if _v2 is None:
+        path = os.path.join(MODEL_DIR, "url_model_v2.joblib")
+        report = os.path.join(MODEL_DIR, "url_model_v2_report.json")
+        if os.path.exists(path) and os.path.exists(report):
+            with open(report, encoding="utf-8") as f:
+                _v2 = {"model": joblib.load(path), "report": json.load(f)}
+        else:
+            _v2 = False
+    return _v2 or None
+
+
+def _predict_v2(v2: dict, url: str) -> dict:
+    from url_features import calibrate
+
+    raw = float(v2["model"].predict_proba([url])[0][1]) * 100
+    t = v2["report"]["thresholds"]
+    risk_score = round(calibrate(raw, t["suspicious"], t["phishing"]), 2)
+    label = "phishing" if risk_score >= 60 else "normal"
+    return {"status": "ready", "risk_score": risk_score, "label": label}
+
+
 def predict_model(url: str) -> dict:
+    v2 = _load_v2()
+    if v2 is not None:
+        return _predict_v2(v2, url)
     _load_artifacts()
     if _load_error is not None:
         return {"status": "not_ready", "risk_score": None, "label": None}
