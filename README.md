@@ -5,7 +5,6 @@
 - 배포 URL: TODO (Vercel 프론트엔드 주소)
 - 백엔드 API: TODO (Render 백엔드 주소) · 상태 확인 `/health`
 - 발표 자료: `docs/presentation.pdf` (TODO)
-- 시연 영상: TODO
 
 ## 프로젝트 소개
 
@@ -26,6 +25,7 @@
 | 이름 | 역할 | 담당 업무 |
 |------|------|-----------|
 | 김수아 | 팀장 / PM | 일정 관리, QA, 문서화, 멘토링 피드백 반영 총괄 |
+| TODO | TODO | TODO |
 | TODO | TODO | TODO |
 | TODO | TODO | TODO |
 
