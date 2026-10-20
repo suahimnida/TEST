@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URL 피싱 확률 분석 | 최종 발표</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2342e8c4'/%3E%3Ctext x='16' y='23' font-size='19' font-weight='800' text-anchor='middle' font-family='sans-serif' fill='%230a0c0d'%3EP%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --bg: #0a0d0e;
+    --stage: #0d1011;
+    --surface: #141819;
+    --line: #262c2d;
+    --text: #f4f7f6;
+    --sub: #c3cbc8;
+    --muted: #7f8986;
+    --safe: #42e8c4;
+    --caution: #ffb84d;
+    --danger: #ff4d5a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    word-break: keep-all;
+  }
+
+  /* 1600×900 고정 캔버스를 화면 크기에 맞춰 확대·축소한다 (프로젝터·노트북 어디서나 같은 배치) */
+  #viewport {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+
+  #stage {
+    position: relative;
+    width: 1600px;
+    height: 900px;
+    background: var(--stage);
+    transform-origin: center center;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 84px 104px 96px;
+    display: none;
+    flex-direction: column;
+  }
+
+  .slide.active { display: flex; }
+
+  /* 슬라이드 공통 */
+  .slide h2 {
+    font-size: 54px;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.2;
+  }
+
+  .lead {
+    margin-top: 18px;
+    max-width: 1100px;
+    color: var(--sub);
+    font-size: 26px;
+    line-height: 1.55;
+  }
+
+  /* 본문은 제목 아래 남은 공간의 가운데에 둔다 (슬라이드마다 내용 양이 달라도 균형 있게) */
+  .body { margin-top: 48px; margin-bottom: 40px; flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+  .body.row { flex-direction: row; align-items: center; }
+
+  .foot {
+    position: absolute;
+    left: 104px;
+    right: 104px;
+    bottom: 40px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 16px;
+  }
+
+  .muted { color: var(--muted); }
+  .safe { color: var(--safe); }
+  .caution { color: var(--caution); }
+  .danger { color: var(--danger); }
+
+  .row { display: flex; gap: 40px; }
+  .col { flex: 1; min-width: 0; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 36px 40px;
+  }
+
+  .panel h3 {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .panel p {
+    margin-top: 12px;
+    color: var(--sub);
+    font-size: 23px;
+    line-height: 1.55;
+  }
+
+  .list { list-style: none; }
+
+  .list li {
+    position: relative;
+    padding-left: 30px;
+    color: var(--sub);
+    font-size: 26px;
+    line-height: 1.5;
+  }
+
+  .list li + li { margin-top: 22px; }
+
+  .list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 15px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--safe);
+  }
+
+  .list li strong { color: var(--text); font-weight: 700; }
+
+  /* 표지 */
+  .cover { padding: 0; flex-direction: row; }
+
+  .cover-text {
+    width: 760px;
+    padding: 110px 0 0 104px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cover-kicker { color: var(--muted); font-size: 22px; }
+
+  .cover h1 {
+    margin-top: 28px;
+    font-size: 92px;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1.08;
+  }
+
+  .cover-sub {
+    margin-top: 32px;
+    color: var(--sub);
+    font-size: 28px;
+    line-height: 1.55;
+  }
+
+  .cover-meta {
+    margin-top: auto;
+    margin-bottom: 96px;
+    color: var(--muted);
+    font-size: 20px;
+    line-height: 1.8;
+  }
+
+  .cover-meta b { color: var(--sub); font-weight: 600; }
+
+  /* 표지 오른쪽: 서비스의 실제 판정 카드를 크게 재현 */
+  .cover-visual {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid var(--line);
+    background:
+      radial-gradient(circle at 70% 30%, rgba(255, 77, 90, 0.10), transparent 55%),
+      var(--surface);
+  }
+
+  .verdict {
+    width: 640px;
+    padding: 44px 48px 40px;
+    border: 1px solid var(--line);
+    border-left: 8px solid var(--danger);
+    border-radius: 18px;
+    background: var(--stage);
+  }
+
+  .verdict-top { display: flex; align-items: center; gap: 16px; }
+
+  .badge {
+    padding: 6px 16px;
+    border-radius: 999px;
+    background: var(--danger);
+    color: #0a0c0d;
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .verdict-url { color: var(--muted); font-size: 19px; }
+
+  .verdict-head {
+    margin-top: 26px;
+    color: var(--danger);
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+  }
+
+  .verdict-reason { margin-top: 12px; font-size: 25px; color: var(--text); }
+
+  .verdict-todo {
+    margin-top: 28px;
+    padding: 20px 24px;
+    border: 1px solid var(--danger);
+    border-radius: 12px;
+  }
+
+  .verdict-todo span { color: var(--danger); font-size: 17px; font-weight: 700; }
+  .verdict-todo p { margin-top: 6px; font-size: 22px; font-weight: 600; }
+
+  .verdict-after {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 12px 20px;
+    border: 1px solid #3a4041;
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 19px;
+    font-weight: 700;
+  }
+
+  /* 팀 */
+  .team { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+
+  .team { align-items: start; }
+
+  .member {
+    padding: 36px 32px;
+    border-top: 4px solid var(--line);
+    background: var(--surface);
+    border-radius: 0 0 16px 16px;
+  }
+
+  .member.lead-member { border-top-color: var(--safe); }
+  .member .role { color: var(--muted); font-size: 20px; }
+  .member .name { margin-top: 8px; font-size: 38px; font-weight: 800; letter-spacing: -0.02em; }
+
+  .member ul { margin-top: 28px; list-style: none; }
+  .member li { color: var(--sub); font-size: 21px; line-height: 1.5; }
+  .member li + li { margin-top: 10px; }
+
+  /* 문제 */
+  .problems { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+
+  .problem .q {
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -0.02em;
+  }
+
+  .problem .a {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--sub);
+    font-size: 22px;
+    line-height: 1.6;
+  }
+
+  .messages { display: flex; gap: 16px; margin-bottom: 44px; }
+
+  .sms {
+    white-space: nowrap;
+    padding: 16px 22px;
+    border-radius: 18px 18px 18px 4px;
+    background: #20262a;
+    color: var(--sub);
+    font-size: 21px;
+  }
+
+  .sms u { color: #7fb8ff; text-decoration-color: #7fb8ff55; }
+
+  /* 타겟 비교 */
+  .before-after { display: grid; grid-template-columns: 1fr 72px 1fr; align-items: stretch; }
+
+  .arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 40px;
+  }
+
+  .panel.dim { background: transparent; }
+  .panel.dim h3 { color: var(--muted); }
+  .panel.on { border-color: var(--safe); }
+
+  .tag {
+    display: inline-block;
+    margin-bottom: 14px;
+    color: var(--muted);
+    font-size: 18px;
+  }
+
+  .panel.on .tag { color: var(--safe); }
+
+  .note {
+    margin-top: 36px;
+    padding-left: 22px;
+    border-left: 3px solid var(--caution);
+    color: var(--sub);
+    font-size: 22px;
+    line-height: 1.6;
+  }
+
+  /* 차별점 표 */
+  .compare { width: 100%; border-collapse: collapse; }
+
+  .compare th {
+    padding: 0 0 18px;
+    color: var(--muted);
+    font-size: 20px;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .compare td {
+    padding: 22px 0;
+    border-top: 1px solid var(--line);
+    font-size: 25px;
+    vertical-align: top;
+  }
+
+  .compare td:first-child { width: 36%; color: var(--muted); }
+  .compare td:last-child { font-weight: 600; }
+
+  /* 원칙 */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+
+  .split .panel { padding: 44px; }
+  .split .who { margin-top: 18px; font-size: 24px; color: var(--text); font-weight: 600; }
+
+  .quote {
+    margin-top: 40px;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: -0.02em;
+  }
+
+  .quote .muted { font-weight: 500; font-size: 22px; display: block; margin-top: 8px; }
+
+  /* 판정 흐름 */
+  .flow { display: flex; align-items: stretch; gap: 0; }
+
+  .step {
+    flex: 1;
+    padding: 30px 28px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+  }
+
+  .step .n { color: var(--muted); font-size: 18px; }
+  .step h3 { margin-top: 8px; font-size: 27px; font-weight: 700; }
+  .step p { margin-top: 12px; color: var(--sub); font-size: 20px; line-height: 1.55; }
+
+  .flow .to {
+    width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 26px;
+  }
+
+  .verdicts { display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+
+  .v {
+    padding: 14px 22px;
+    border-radius: 12px;
+    font-size: 23px;
+    font-weight: 800;
+    color: #0a0c0d;
+    text-align: center;
+  }
+
+  .v.safe-bg { background: var(--safe); }
+  .v.caution-bg { background: var(--caution); }
+  .v.danger-bg { background: var(--danger); }
+
+  .shortcut {
+    margin-top: 18px;
+    color: var(--danger);
+    font-size: 20px;
+  }
+
+  .evidence {
+    margin-top: 40px;
+    padding: 26px 32px;
+    border: 1px dashed #3a4041;
+    border-radius: 16px;
+    display: flex;
+    gap: 28px;
+    align-items: center;
+  }
+
+  .evidence strong { font-size: 23px; white-space: nowrap; }
+  .evidence span { color: var(--sub); font-size: 22px; }
+
+  /* ML 차트 */
+  .chart { display: flex; align-items: flex-end; gap: 22px; height: 400px; padding-bottom: 2px; border-bottom: 1px solid var(--line); }
+
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .bar-val { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+
+  .bar {
+    width: 100%;
+    border-radius: 10px 10px 0 0;
+    background: #2c3436;
+  }
+
+  .bar.bad { background: var(--danger); }
+  .bar.best { background: var(--safe); }
+
+  .bar-labels { display: flex; gap: 22px; margin-top: 14px; }
+  .bar-labels span { flex: 1; text-align: center; color: var(--sub); font-size: 18px; line-height: 1.4; }
+
+  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 8px; }
+
+  .metric { padding: 18px 0; border-top: 1px solid var(--line); }
+  .metric:nth-child(odd) { padding-right: 24px; }
+  .metric .k { color: var(--muted); font-size: 19px; }
+  .metric .val { margin-top: 4px; font-size: 40px; font-weight: 800; letter-spacing: -0.02em; }
+
+  /* RAG */
+  .code {
+    padding: 30px 34px;
+    border-radius: 16px;
+    background: #090b0c;
+    border: 1px solid var(--line);
+    font-family: "Pretendard", sans-serif;
+    font-size: 21px;
+    line-height: 1.75;
+    color: var(--sub);
+  }
+
+  .code .e { color: var(--caution); font-weight: 700; }
+  .code .g { color: var(--safe); font-weight: 700; }
+  .code .h { color: var(--muted); }
+
+  .checks { list-style: none; }
+
+  .checks li {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+    font-size: 23px;
+  }
+
+  .checks li span:last-child { color: var(--caution); white-space: nowrap; }
+
+  /* 리포트·피드백 */
+  .shot {
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    display: block;
+  }
+
+  .loop { display: flex; flex-direction: column; gap: 0; }
+
+  .loop .item {
+    display: flex;
+    gap: 20px;
+    align-items: baseline;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+    font-size: 23px;
+  }
+
+  .loop .item .n { width: 28px; color: var(--muted); font-size: 19px; }
+  .loop .item small { color: var(--muted); font-size: 18px; margin-left: 8px; }
+
+  /* 아키텍처 */
+  .arch { display: grid; grid-template-columns: 220px 70px 300px 70px 1fr; align-items: center; }
+
+  .box {
+    padding: 26px 24px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+  }
+
+  .box h3 { font-size: 26px; font-weight: 700; }
+  .box p { margin-top: 8px; color: var(--sub); font-size: 19px; line-height: 1.5; }
+  .box .host { margin-top: 12px; color: var(--muted); font-size: 17px; }
+  .box.core { border-color: var(--safe); padding: 34px 28px; }
+
+  .ext { display: flex; flex-direction: column; gap: 14px; }
+
+  .ext .box { padding: 18px 22px; display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+  .ext .box h3 { font-size: 22px; }
+  .ext .box p { margin: 0; font-size: 18px; text-align: right; }
+
+  .stack { margin-top: 44px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--line); }
+  .stack div { padding: 20px 20px 0 0; }
+  .stack .k { color: var(--muted); font-size: 18px; }
+  .stack .val { margin-top: 6px; font-size: 21px; line-height: 1.45; }
+
+  /* 피드백 */
+  .sources { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+
+  .source { padding: 26px 30px; background: var(--surface); border-radius: 16px; border: 1px solid var(--line); }
+  .source .when { color: var(--muted); font-size: 18px; }
+  .source h3 { margin-top: 6px; font-size: 26px; font-weight: 700; }
+  .source p { margin-top: 8px; color: var(--sub); font-size: 19px; line-height: 1.5; }
+
+  .changes { margin-top: 36px; width: 100%; border-collapse: collapse; }
+  .changes td { padding: 18px 0; border-top: 1px solid var(--line); font-size: 22px; vertical-align: top; }
+  .changes td:first-child { width: 42%; color: var(--muted); padding-right: 24px; }
+
+  .score {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    margin-top: 30px;
+    font-size: 24px;
+    color: var(--sub);
+  }
+
+  .score b { font-size: 44px; color: var(--text); font-weight: 800; letter-spacing: -0.02em; }
+  .score .from { font-size: 32px; color: var(--muted); font-weight: 700; }
+
+  /* 성과·향후 */
+  .result { padding: 28px 0; border-top: 1px solid var(--line); }
+  .result .val { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; }
+  .result .k { margin-top: 6px; color: var(--sub); font-size: 21px; }
+
+  /* 마지막 */
+  .end { justify-content: center; }
+  .end h2 { font-size: 80px; letter-spacing: -0.05em; }
+  .end .lead { font-size: 30px; }
+  .end .links { margin-top: 56px; color: var(--muted); font-size: 22px; line-height: 1.9; }
+  .end .links b { color: var(--text); font-weight: 600; }
+
+  /* 진행 막대 */
+  #progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 4px;
+    background: var(--safe);
+    transition: width 0.25s ease;
+  }
+
+  /* 화면 아래 조작 안내 (마우스를 움직이면 잠깐 보임) */
+  #controls {
+    position: fixed;
+    right: 20px;
+    bottom: 18px;
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  body.show-controls #controls { opacity: 1; }
+
+  #controls button {
+    padding: 10px 16px;
+    border: 1px solid #3a4041;
+    border-radius: 10px;
+    background: #141819;
+    color: var(--sub);
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  #controls button:focus-visible { outline: 2px solid var(--safe); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #progress, #controls { transition: none; }
+  }
+
+  @media print {
+    html, body { overflow: visible; height: auto; background: var(--stage); }
+    #viewport { position: static; display: block; }
+    #stage { transform: none !important; width: 1600px; height: auto; overflow: visible; }
+    .slide { position: relative; display: flex !important; height: 900px; page-break-after: always; }
+    #controls, #progress { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="viewport">
+<main id="stage" aria-live="polite">
+
+  <!-- 1. 표지 -->
+  <section class="slide cover" data-title="표지">
+    <div class="cover-text">
+      <p class="cover-kicker">코디세이 AI 네이티브 Final Project</p>
+      <h1>URL 피싱<br>확률 분석</h1>
+      <p class="cover-sub">받은 링크를 눌러도 되는지,<br>지금 무엇을 해야 하는지 알려 주는 서비스</p>
+      <p class="cover-meta">
+        <b>김수아</b>(팀장) <b>장은서</b> <b>박채린</b> <b>최성주</b><br>
+        phishing-link-checker-five.vercel.app
+      </p>
+    </div>
+    <div class="cover-visual" aria-hidden="true">
+      <div class="verdict">
+        <div class="verdict-top">
+          <span class="badge">위험</span>
+          <span class="verdict-url">http://kakaobank-secure-login.xyz/verify</span>
+        </div>
+        <div class="verdict-head">누르지 마세요</div>
+        <p class="verdict-reason">피싱에 자주 쓰이는 주소 끝자리예요</p>
+        <div class="verdict-todo">
+          <span>지금 할 일</span>
+          <p>링크를 누르지 말고 받은 메시지를 삭제하세요.</p>
+        </div>
+        <span class="verdict-after">이미 눌렀다면? +</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 팀원 및 역할 -->
+  <section class="slide" data-title="팀원 및 역할">
+    <h2>팀원 및 역할</h2>
+    <div class="body"><div class="team">
+      <div class="member lead-member">
+        <p class="role">팀장 / PM</p>
+        <p class="name">김수아</p>
+        <ul>
+          <li>일정 관리, QA 총괄</li>
+          <li>문서화, 배포 관리</li>
+          <li>멘토링 피드백 반영</li>
+        </ul>
+      </div>
+      <div class="member">
+        <p class="role">프론트엔드</p>
+        <p class="name">장은서</p>
+        <ul>
+          <li>결과 화면·분석 기록 UI</li>
+          <li>입력 검증</li>
+          <li>모바일·접근성, 프론트엔드 QA</li>
+        </ul>
+      </div>
+      <div class="member">
+        <p class="role">백엔드</p>
+        <p class="name">박채린</p>
+        <ul>
+          <li>API 설계</li>
+          <li>DB·접근 제어</li>
+          <li>공유·삭제 기능, 백엔드 QA</li>
+        </ul>
+      </div>
+      <div class="member">
+        <p class="role">AI</p>
+        <p class="name">최성주</p>
+        <ul>
+          <li>ML 모델 학습·평가</li>
+          <li>RAG·LLM 설명 파이프라인</li>
+          <li>AI QA</li>
+        </ul>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 3. 문제 정의 -->
+  <section class="slide" data-title="문제 정의">
+    <h2>이 링크, 눌러도 될까요?</h2>
+    <div class="body">
+      <div class="messages" aria-hidden="true">
+        <div class="sms">[택배] 배송 보류 안내 <u>bit.ly/3xYz…</u></div>
+        <div class="sms">[계정] 본인 확인 필요 <u>kb-verify.top/…</u></div>
+        <div class="sms">[환급] 미수령 환급금 <u>refund-gov.xyz/…</u></div>
+      </div>
+      <div class="problems">
+        <div class="problem">
+          <p class="q">일반 사용자는 스스로 판단할 수 없어요</p>
+          <p class="a">공공기관·은행을 흉내 낸 주소는 봐도 무엇이 이상한지 알기 어렵습니다.</p>
+        </div>
+        <div class="problem">
+          <p class="q">기존 도구는 일반 사용자에게 맞지 않아요</p>
+          <p class="a">VirusTotal은 전문가용이고, 금융 앱의 확인 기능은 그 앱 안에서만 쓸 수 있습니다.</p>
+        </div>
+        <div class="problem">
+          <p class="q">판정만으로는 부족해요</p>
+          <p class="a">필요한 건 점수가 아니라 "눌러도 되는지"와 "이미 눌렀다면 무엇부터 할지"입니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 타겟 사용자 -->
+  <section class="slide" data-title="타겟 사용자">
+    <h2>타겟을 다시 정했습니다</h2>
+    <div class="body">
+      <div class="before-after">
+        <div class="panel dim">
+          <span class="tag">처음</span>
+          <h3>보안 지식이 있는 사용자까지</h3>
+          <p>점수, 신뢰도, 글자별 위험 기여도처럼 기술 정보가 결과 맨 위에 있었어요.</p>
+        </div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="panel on">
+          <span class="tag">멘토링·베타 테스트 후</span>
+          <h3>받은 링크를 스스로 판단하기 어려운 일반 사용자</h3>
+          <p>쉬운 판정, 지금 할 일, 믿을 수 있는 근거, 공식 신고처가 필요해요.</p>
+        </div>
+      </div>
+      <p class="note">ML 단독 오탐률이 34.2%라서 전문가용 판정 도구로 경쟁하기보다,<br>일반 사용자가 이해하고 행동하도록 돕는 쪽의 가치가 더 크다고 판단했습니다.</p>
+    </div>
+  </section>
+
+  <!-- 5. 차별점 -->
+  <section class="slide" data-title="차별점">
+    <h2>기존 서비스와 무엇이 다른가요</h2>
+    <div class="body">
+      <table class="compare">
+        <thead><tr><th>기존 서비스</th><th>우리 서비스</th></tr></thead>
+        <tbody>
+          <tr><td>판정 결과를 나열</td><td>3단계 판정 + 한 줄 이유 + 지금 할 일 하나</td></tr>
+          <tr><td>판정 후 안내 없음</td><td>"이미 눌렀다면?" 상황별 조치와 118·112·1332 연결</td></tr>
+          <tr><td>AI 설명의 출처가 불분명</td><td>모든 문장에 출처 번호, 근거 없는 문장은 자동 차단</td></tr>
+          <tr><td>사이트에 접속해 검사하기도 함</td><td>의심 사이트에 접속하지 않고 공개 기록만 조회</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6. 핵심 원칙 -->
+  <section class="slide" data-title="핵심 원칙">
+    <h2>AI는 판정하지 않습니다</h2>
+    <div class="body">
+      <div class="split">
+        <div class="panel">
+          <span class="tag">판정 (점수를 정함)</span>
+          <h3>KISA 목록 · ML 모델 · 규칙</h3>
+          <p>같은 입력에는 항상 같은 결과가 나오고, 평가 세트로 성능을 측정할 수 있어요.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">설명 (근거를 풀어 줌)</span>
+          <h3>생성형 AI</h3>
+          <p>이미 정해진 판정의 근거를 쉬운 말로 설명하고 리포트를 작성해요. 점수 계산에는 들어가지 않아요.</p>
+        </div>
+      </div>
+      <p class="quote">AI에 판정까지 맡기면, 설명이 그럴듯할수록 틀린 판정을 믿게 됩니다.<span class="muted">그래서 프롬프트에 "판정은 이미 끝났고 당신은 판정하지 않습니다"를 명시했습니다.</span></p>
+    </div>
+  </section>
+
+  <!-- 7. 판정 흐름 -->
+  <section class="slide" data-title="판정 흐름">
+    <h2>판정은 이렇게 이루어집니다</h2>
+    <div class="body">
+      <div class="flow">
+        <div class="step">
+          <p class="n">1단계</p>
+          <h3>KISA 피싱 목록</h3>
+          <p>일치하면 바로 위험 확정. 카카오톡 채널처럼 여럿이 쓰는 주소는 신고된 경로까지 일치할 때만</p>
+          <p class="shortcut">일치 → 바로 위험</p>
+        </div>
+        <div class="to" aria-hidden="true">→</div>
+        <div class="step">
+          <p class="n">2단계</p>
+          <h3>ML 모델</h3>
+          <p>URL의 3~5글자 조합(n-gram)으로 0~100점 위험도 계산</p>
+        </div>
+        <div class="to" aria-hidden="true">→</div>
+        <div class="step">
+          <p class="n">3단계</p>
+          <h3>규칙 보정</h3>
+          <p>공식 도메인 약 500개는 최대 25점, 단축 URL은 주의, 공식 주소를 흉내 낸 글자는 위험</p>
+        </div>
+        <div class="to" aria-hidden="true">→</div>
+        <div class="verdicts">
+          <div class="v safe-bg">안전</div>
+          <div class="v caution-bg">주의</div>
+          <div class="v danger-bg">위험</div>
+        </div>
+      </div>
+      <div class="evidence">
+        <strong>점수에 넣지 않는 근거</strong>
+        <span>URL 구조 탐지, 도메인 등록일·인증서·서버 위치(공개 기록), 유사 사례, 출처 붙은 AI 설명</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. ML 모델 -->
+  <section class="slide" data-title="ML 모델">
+    <h2>학습 데이터의 편향부터 고쳤습니다</h2>
+    <p class="lead">처음 모델은 "https://www.로 시작하면 정상"이라는 지름길을 배워 무작위보다 못했어요. 정상 URL의 형태를 고르게 바꿔 다시 학습했습니다.</p>
+    <div class="body row" style="margin-top:40px; gap:64px;">
+      <div class="col" style="flex:1.45;">
+        <div class="chart" role="img" aria-label="외부 평가 ROC-AUC: 지름길 규칙 0.599, 랜덤 포레스트 0.393, 문자 n-gram 0.771, 편향 보정 0.867, 최종 0.879">
+          <div class="bar-wrap"><span class="bar-val muted">0.599</span><div class="bar" style="height:59.9%"></div></div>
+          <div class="bar-wrap"><span class="bar-val danger">0.393</span><div class="bar bad" style="height:39.3%"></div></div>
+          <div class="bar-wrap"><span class="bar-val muted">0.771</span><div class="bar" style="height:77.1%"></div></div>
+          <div class="bar-wrap"><span class="bar-val muted">0.867</span><div class="bar" style="height:86.7%"></div></div>
+          <div class="bar-wrap"><span class="bar-val safe">0.879</span><div class="bar best" style="height:87.9%"></div></div>
+        </div>
+        <div class="bar-labels" aria-hidden="true">
+          <span>지름길 규칙</span><span>처음 모델<br>(랜덤 포레스트)</span><span>문자 n-gram</span><span>+ 편향 보정</span><span>+ URL 정규화</span>
+        </div>
+        <p class="muted" style="margin-top:14px; font-size:18px;">외부 평가 세트 ROC-AUC (피싱 2,000건, 정상 409건, 학습 데이터와 도메인 분리)</p>
+      </div>
+      <div class="col">
+        <div class="metrics">
+          <div class="metric"><p class="k">오탐률, ML 단독</p><p class="val">34.2%</p></div>
+          <div class="metric"><p class="k">오탐률, 서비스 전체</p><p class="val">2.0%</p></div>
+          <div class="metric"><p class="k">미탐률</p><p class="val">10.3%</p></div>
+          <div class="metric"><p class="k">서비스 전체 ROC-AUC</p><p class="val">0.978</p></div>
+        </div>
+        <p class="note" style="margin-top:28px; font-size:20px;">서비스 전체 오탐률은 평가 세트 정상 URL의 81.2%가 공식 도메인이라 낙관적인 값이에요. 처음 보는 사이트는 ML 단독 수치로 봐야 합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. RAG와 출처 검증 -->
+  <section class="slide" data-title="RAG와 출처 검증">
+    <h2>AI 설명에는 모두 출처가 붙습니다</h2>
+    <p class="lead">탐지 근거와, 검색한 공식 기관 가이드 10건(KISA·금융감독원·경찰청 등)에 번호를 붙여 AI에 넘겨요.</p>
+    <div class="body row" style="margin-top:40px;">
+      <div class="col" style="flex:1.2;">
+        <div class="code">
+          <span class="h">[근거]</span><br>
+          <span class="e">[E3]</span> '.xyz'는 피싱에 자주 쓰이는 최상위 도메인입니다.<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;피싱 URL의 11.3%, 정상 URL의 0.1%에서 나타남<br>
+          <span class="h">[대응 가이드]</span><br>
+          <span class="g">[G1]</span> 링크 대신 공식 경로로 확인하기 (KISA 보호나라)<br><br>
+          <span class="h">AI 설명</span><br>
+          피싱에 자주 쓰이는 주소 끝자리를 사용했습니다 <span class="e">[E3]</span>.<br>
+          링크 대신 공식 앱으로 확인하세요 <span class="g">[G1]</span>.
+        </div>
+      </div>
+      <div class="col">
+        <p style="font-size:24px; font-weight:700; margin-bottom:8px;">서버가 다시 검사해요</p>
+        <ul class="checks">
+          <li><span>출처 번호가 없는 문장</span><span>템플릿으로 교체</span></li>
+          <li><span>목록에 없는 번호</span><span>템플릿으로 교체</span></li>
+          <li><span>근거에 없는 숫자</span><span>템플릿으로 교체</span></li>
+          <li><span>전화번호, 웹사이트 주소</span><span>템플릿으로 교체</span></li>
+        </ul>
+        <p class="muted" style="margin-top:20px; font-size:19px; line-height:1.55;">숫자는 근거에 있는 것만 쓸 수 있어서, AI가 "피싱 확률 95%" 같은 숫자를 지어낼 수 없어요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. 리포트와 피드백 순환 -->
+  <section class="slide" data-title="리포트와 피드백 순환">
+    <h2>리포트, 그리고 계속 정확해지는 구조</h2>
+    <div class="body row" style="gap:56px;">
+      <div class="col" style="flex:1.15;">
+        <p style="font-size:26px; font-weight:700;">다단계 AI 리포트 (PDF)</p>
+        <p class="muted" style="margin-top:8px; font-size:20px; line-height:1.55;">후속 조치 조사(gpt-5.4) → 리포트 작성(gpt-5.4-mini) → 신고처·연락처는 서버가 검증된 값으로 넣기</p>
+        <img class="shot" style="margin-top:24px;" src="./png/report_screenshot.png" alt="실제 생성된 피싱 URL 분석 리포트 PDF 첫 페이지">
+      </div>
+      <div class="col">
+        <p style="font-size:26px; font-weight:700;">"이 판정이 틀렸나요?"</p>
+        <div class="loop" style="margin-top:18px;">
+          <div class="item"><span class="n">1</span><span>사용자 의견 접수</span></div>
+          <div class="item"><span class="n">2</span><span>관리자 메일 알림<small>Resend</small></span></div>
+          <div class="item"><span class="n">3</span><span>사람이 검토</span></div>
+          <div class="item"><span class="n">4</span><span>블랙리스트 예외·추가, 재학습 데이터</span></div>
+          <div class="item"><span class="n">5</span><span>월 1회 재학습<small>나빠지지 않을 때만 교체</small></span></div>
+        </div>
+        <p class="note" style="font-size:20px; margin-top:24px;">자동으로 반영하지 않는 이유: 피싱 사이트를 "안전"이라고 반복 신고하는 조작을 막기 위해서예요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. 아키텍처와 기술 스택 -->
+  <section class="slide" data-title="아키텍처와 기술 스택">
+    <h2>시스템 구성</h2>
+    <div class="body">
+      <div class="arch">
+        <div class="box">
+          <h3>사용자</h3>
+          <p>React 19 + Vite</p>
+          <p class="host">Vercel</p>
+        </div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="box core">
+          <h3>FastAPI</h3>
+          <p>판정, 근거 수집, RAG, 리포트, 의견 처리</p>
+          <p class="host">Render · PostgreSQL</p>
+        </div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="ext">
+          <div class="box"><h3>Claude</h3><p>출처 붙은 설명</p></div>
+          <div class="box"><h3>OpenAI 호환 API</h3><p>후속 조치 조사, 리포트</p></div>
+          <div class="box"><h3>RDAP · crt.sh · DNS</h3><p>도메인 이름만 전송</p></div>
+          <div class="box"><h3>Resend</h3><p>의견 알림 메일</p></div>
+        </div>
+      </div>
+      <div class="stack">
+        <div><p class="k">ML</p><p class="val">scikit-learn<br>문자 n-gram + 로지스틱 회귀</p></div>
+        <div><p class="k">RAG</p><p class="val">TF-IDF 가이드 검색<br>특징 기반 유사 사례</p></div>
+        <div><p class="k">LLM</p><p class="val">Claude<br>gpt-5.4, gpt-5.4-mini</p></div>
+        <div><p class="k">배포</p><p class="val">Render(유료), Vercel<br>GitHub 브랜치 자동 배포</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. 사용자 피드백 -->
+  <section class="slide" data-title="사용자 피드백">
+    <h2>피드백으로 바뀐 것</h2>
+    <div class="body">
+      <div class="sources">
+        <div class="source"><p class="when">10월 10~11일</p><h3>팀 내부 QA</h3><p>대소문자 우회, 단축 URL, 입력 검증, 접근 제어, 모바일 화면</p></div>
+        <div class="source"><p class="when">10월 12일</p><h3>전문가 멘토링</h3><p>타겟, 방향성, 차별점, 서비스로서의 발전 방향</p></div>
+        <div class="source"><p class="when">10월 12일</p><h3>베타 테스트 5명</h3><p>학과 교수, 연구회 선배 등 전공자와 비전공 일반인</p></div>
+      </div>
+      <table class="changes">
+        <tr><td>수치와 기술 용어가 많아 이해하기 어려움</td><td>맨 위에 3단계 판정과 지금 할 일, 근거는 접는 카드로</td></tr>
+        <tr><td>이미 눌렀을 때의 안내가 없음</td><td>상황별 조치와 공식 신고기관 연결</td></tr>
+        <tr><td>공식 사이트(국민건강보험공단 등)가 위험으로 판정됨</td><td>목록 점검으로 KISA 목록 속 공용·공식 주소 오류를 찾아 수정</td></tr>
+      </table>
+      <p class="score">베타 테스터 만족도 <span class="from">3.1</span><span class="muted">→</span><b class="safe">4.5</b><span class="muted">/ 5</span></p>
+    </div>
+  </section>
+
+  <!-- 13. AI 윤리와 개인정보 -->
+  <section class="slide" data-title="AI 윤리와 개인정보">
+    <h2>안전하게 쓸 수 있도록</h2>
+    <div class="body row" style="gap:72px;">
+      <div class="col">
+        <p style="font-size:24px; color:var(--muted); margin-bottom:24px;">AI 신뢰성</p>
+        <ul class="list">
+          <li><strong>AI는 설명만</strong> 맡고 판정하지 않아요</li>
+          <li>신고 전화번호처럼 틀리면 위험한 정보는 <strong>서버가 검증된 값</strong>으로 넣어요</li>
+          <li>AI가 쓴 설명에는 <strong>작성한 모델과 출처 번호</strong>를 표시해요</li>
+          <li>안전 판정에도 <strong>"안전을 보장하지는 않아요"</strong>를 함께 보여 줘요</li>
+        </ul>
+      </div>
+      <div class="col">
+        <p style="font-size:24px; color:var(--muted); margin-bottom:24px;">개인정보와 안전</p>
+        <ul class="list">
+          <li>의심 사이트에 <strong>접속하지 않아요</strong></li>
+          <li>성명·식별 암호는 <strong>해시로만 저장</strong>하고, 기록은 <strong>90일 뒤 자동 삭제</strong>해요</li>
+          <li>로그와 메일에서는 URL의 <strong>'?' 뒤를 가려요</strong></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14. 성과와 향후 계획 -->
+  <section class="slide" data-title="성과와 향후 계획">
+    <h2>성과와 앞으로의 계획</h2>
+    <div class="body row" style="gap:80px;">
+      <div class="col">
+        <div class="result"><p class="val">0.393 <span class="muted" style="font-size:40px;">→</span> <span class="safe">0.879</span></p><p class="k">외부 평가 ROC-AUC</p></div>
+        <div class="result"><p class="val">0.15초</p><p class="k">LLM 설명 제외 분석 시간 (로컬 측정)</p></div>
+        <div class="result"><p class="val">약 320개</p><p class="k">백엔드 자동 테스트</p></div>
+      </div>
+      <div class="col">
+        <p style="font-size:24px; color:var(--muted); margin-bottom:24px;">다음 단계</p>
+        <ul class="list">
+          <li>도메인 등록일 같은 평판 신호를 점수에 반영해, 미탐의 98.5%를 차지하는 <strong>짧은 무작위 도메인</strong> 잡기</li>
+          <li>승인된 의견으로 <strong>월 1회 재학습</strong></li>
+          <li><strong>단축 URL의 실제 목적지</strong>를 안전하게 확인하기</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15. 마무리 -->
+  <section class="slide end" data-title="마무리">
+    <h2>감사합니다</h2>
+    <p class="lead">누구나 받은 링크 앞에서 안심하고 판단할 수 있도록.</p>
+    <p class="links">
+      <b>서비스</b> phishing-link-checker-five.vercel.app<br>
+      <b>저장소</b> github.com/suahimnida/Phishing-Link-Checker
+    </p>
+  </section>
+
+  <div class="foot" aria-hidden="true">
+    <span>URL 피싱 확률 분석</span>
+    <span><span id="cur">1</span> / <span id="total">15</span></span>
+  </div>
+  <div id="progress" aria-hidden="true"></div>
+</main>
+</div>
+
+<div id="controls">
+  <button type="button" id="prev" aria-label="이전 슬라이드">이전</button>
+  <button type="button" id="next" aria-label="다음 슬라이드">다음</button>
+  <button type="button" id="full" aria-label="전체 화면">전체 화면 (F)</button>
+</div>
+
+<script>
+  const stage = document.getElementById("stage");
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const foot = document.querySelector(".foot");
+  let index = 0;
+
+  document.getElementById("total").textContent = slides.length;
+
+  // 1600×900 캔버스를 창 크기에 맞춰 비율을 유지한 채 확대·축소
+  function fit() {
+    const scale = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+    stage.style.transform = `scale(${scale})`;
+  }
+
+  function show(i) {
+    index = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, n) => s.classList.toggle("active", n === index));
+    document.getElementById("cur").textContent = index + 1;
+    document.getElementById("progress").style.width = `${((index + 1) / slides.length) * 100}%`;
+    // 표지와 마지막 장에서는 쪽 번호를 숨김
+    foot.style.visibility = index === 0 || index === slides.length - 1 ? "hidden" : "visible";
+    document.title = `${slides[index].dataset.title} | URL 피싱 확률 분석`;
+    history.replaceState(null, "", `#${index + 1}`);
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (["ArrowRight", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); show(index + 1); }
+    else if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); show(index - 1); }
+    else if (e.key === "Home") show(0);
+    else if (e.key === "End") show(slides.length - 1);
+    else if (e.key === "f" || e.key === "F") toggleFull();
+  });
+
+  // 화면 오른쪽 절반을 누르면 다음, 왼쪽 절반은 이전 (발표용 클리커가 없을 때)
+  stage.addEventListener("click", (e) => {
+    const rect = stage.getBoundingClientRect();
+    show(e.clientX > rect.left + rect.width / 2 ? index + 1 : index - 1);
+  });
+
+  function toggleFull() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  }
+
+  document.getElementById("prev").addEventListener("click", () => show(index - 1));
+  document.getElementById("next").addEventListener("click", () => show(index + 1));
+  document.getElementById("full").addEventListener("click", toggleFull);
+
+  // 마우스를 움직이면 조작 버튼을 잠깐 보여 줌
+  let hideTimer;
+  document.addEventListener("mousemove", () => {
+    document.body.classList.add("show-controls");
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => document.body.classList.remove("show-controls"), 2000);
+  });
+
+  window.addEventListener("resize", fit);
+  fit();
+  const start = parseInt(location.hash.slice(1), 10);
+  show(Number.isFinite(start) ? start - 1 : 0);
+</script>
+</body>
+</html>
